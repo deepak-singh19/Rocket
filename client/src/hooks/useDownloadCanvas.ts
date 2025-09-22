@@ -50,14 +50,14 @@ export const useDownloadCanvas = () => {
 
   const generateFilename = useCallback((designName: string, timestamp?: Date): string => {
     const now = timestamp || new Date()
-    const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD
-    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-') // HH-MM-SS
+    const dateStr = now.toISOString().split('T')[0] 
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-') 
     
-    // Clean design name for filename
+    
     const cleanName = designName
-      .replace(/[^a-zA-Z0-9\s-_]/g, '') // Remove special characters
-      .replace(/\s+/g, '_') // Replace spaces with underscores
-      .substring(0, 50) // Limit length
+      .replace(/[^a-zA-Z0-9\s-_]/g, '') 
+      .replace(/\s+/g, '_') 
+      .substring(0, 50) 
     
     return `${cleanName}_${dateStr}_${timeStr}.png`
   }, [])

@@ -32,21 +32,21 @@ export const useAutosavePerformance = () => {
   })
 
   const eventsRef = useRef<SaveEvent[]>([])
-  const maxEvents = 100 // Keep last 100 events
+  const maxEvents = 100 
 
   const recordSaveEvent = useCallback((event: Omit<SaveEvent, 'timestamp'>) => {
     const timestamp = Date.now()
     const eventWithTimestamp = { ...event, timestamp }
     
-    // Add to events array
+  
     eventsRef.current.push(eventWithTimestamp)
     
-    // Keep only recent events
+  
     if (eventsRef.current.length > maxEvents) {
       eventsRef.current = eventsRef.current.slice(-maxEvents)
     }
 
-    // Update metrics
+   
     const metrics = metricsRef.current
     metrics.saveCount++
     metrics.totalSaveTime += event.duration
@@ -111,23 +111,23 @@ export const useAutosavePerformance = () => {
 function getPerformanceGrade(metrics: PerformanceMetrics): 'A' | 'B' | 'C' | 'D' | 'F' {
   const { averageSaveTime, successRate, averageBatchSize } = metrics
   
-  // Grade based on multiple factors
+ 
   let score = 0
   
-  // Success rate (40% weight)
+ 
   if (successRate >= 95) score += 40
   else if (successRate >= 90) score += 30
   else if (successRate >= 80) score += 20
   else if (successRate >= 70) score += 10
   
-  // Average save time (30% weight)
+  
   if (averageSaveTime <= 500) score += 30
   else if (averageSaveTime <= 1000) score += 25
   else if (averageSaveTime <= 2000) score += 20
   else if (averageSaveTime <= 3000) score += 15
   else if (averageSaveTime <= 5000) score += 10
   
-  // Batch efficiency (30% weight)
+
   if (averageBatchSize >= 5) score += 30
   else if (averageBatchSize >= 3) score += 25
   else if (averageBatchSize >= 2) score += 20

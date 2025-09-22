@@ -1,6 +1,3 @@
-/* Canvas Studio App Styles */
-
-/* Custom scrollbar for better UX */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;

@@ -13,7 +13,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace(/\/$/, '') 
   : 'http://localhost:4000'
 
-// Create axios instance with default config
+
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,
   headers: {

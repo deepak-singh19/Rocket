@@ -330,10 +330,9 @@ const designsSlice = createSlice({
         state.error = action.error.message || 'Failed to delete design'
       })
 
-    // Add comment
     builder
       .addCase(addComment.pending, (state) => {
-        // Don't set loading to true for comments to avoid UI flicker
+        
       })
       .addCase(addComment.fulfilled, (state, action) => {
         if (state.selectedDesign) {

@@ -15,7 +15,7 @@ const NewDesign: React.FC = () => {
     name: '',
     width: 1080,
     height: 1080,
-    createdBy: 'john_doe' // In a real app, this would come from auth context
+    createdBy: 'john_doe' 
   })
 
   const canvasPresets = [

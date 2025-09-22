@@ -59,13 +59,13 @@ export const useAutosave = ({
   const isSavingRef = useRef(false)
   const changeCounterRef = useRef(0)
   
-  // Performance monitoring
+ 
   const { recordSaveEvent, getPerformanceSummary } = useAutosavePerformance()
   
-  // Thumbnail generation
+
   const { generateSmartThumbnail, uploadThumbnail } = useThumbnailGenerator()
   
-  // Enhanced state management
+ 
   const [isSaving, setIsSaving] = useState(false)
   const [savingProgress, setSavingProgress] = useState(0)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
@@ -73,7 +73,7 @@ export const useAutosave = ({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveCount, setSaveCount] = useState(0)
 
-  // Create a hash of the current state to detect changes
+ 
   const createStateHash = useCallback(() => {
     return JSON.stringify({
       elements: elements.map(el => ({
@@ -97,7 +97,7 @@ export const useAutosave = ({
         src: el.src,
         borderRadius: el.borderRadius,
         data: el.data,
-        // Drawing-specific properties
+       
         pathData: el.pathData,
         tool: el.tool,
         zIndex: el.zIndex
@@ -106,13 +106,13 @@ export const useAutosave = ({
     })
   }, [elements, canvasSize])
 
-  // Track changes for batching using ref to avoid re-renders
+ 
   const trackChange = useCallback((change: Omit<PendingChange, 'timestamp'>) => {
     if (!batchChanges) return
 
     setPendingChanges(prev => {
       const newChanges = [...prev, { ...change, timestamp: Date.now() }]
-      // Keep only recent changes (last 30 seconds) and limit batch size
+    
       return newChanges
         .filter(c => Date.now() - c.timestamp < 30000)
         .slice(-maxBatchSize)
@@ -142,7 +142,7 @@ export const useAutosave = ({
     const batchSize = pendingChanges.length
 
     try {
-      // Simulate progress for better UX
+      
       const progressInterval = showProgress ? setInterval(() => {
         setSavingProgress(prev => Math.min(prev + 15, 85))
       }, 100) : null
@@ -168,26 +168,26 @@ export const useAutosave = ({
 
       await onSave(saveData)
       
-      // Update the last saved hash after successful save
+     
       const newHash = createStateHash()
       lastSavedRef.current = newHash
 
-      // Send refresh signal to other collaborators immediately after save
+      
       if (collaboration?.isConnected && collaboration.broadcastRefreshSignal) {
 
         collaboration.broadcastRefreshSignal()
       }
       
-      // Refresh the design in the store to keep cache in sync
+    
       if (selectedDesign?._id) {
 
         dispatch(refreshDesign(selectedDesign._id)).catch((error) => {
           console.warn('Failed to refresh design in store:', error)
-          // Don't fail the entire save operation if refresh fails
+          
         })
       }
       
-      // Generate and upload thumbnail if enabled
+      
       if (generateThumbnail && selectedDesign?._id) {
         try {
           const thumbnail = await generateSmartThumbnail(thumbnailOptions)
@@ -209,15 +209,15 @@ export const useAutosave = ({
       setLastSaved(new Date())
       setSaveCount(prev => prev + 1)
       
-      // Clear pending changes after successful save
+      
       setPendingChanges([])
       
       showSuccess('Design saved automatically', { 
         timestamp: new Date(),
-        duration: 1500 // Shorter duration for autosave
+        duration: 1500 
       })
 
-      // Record successful save event
+      
       const duration = Date.now() - startTime
       recordSaveEvent({
         duration,
@@ -225,7 +225,7 @@ export const useAutosave = ({
         success: true
       })
 
-      // Reset progress after a short delay
+     
       setTimeout(() => {
         setSavingProgress(0)
         setIsSaving(false)
@@ -240,7 +240,7 @@ export const useAutosave = ({
         duration: 3000
       })
       
-      // Record failed save event
+     
       const duration = Date.now() - startTime
       recordSaveEvent({
         duration,
@@ -249,7 +249,7 @@ export const useAutosave = ({
         error: error instanceof Error ? error.message : 'Save failed'
       })
 
-      // Reset the hash so it will try to save again
+     
       lastSavedRef.current = ''
       setIsSaving(false)
       setSavingProgress(0)
@@ -304,7 +304,7 @@ export const useAutosave = ({
     debouncedSave()
   }, [elements, canvasSize, enabled, selectedDesign, debouncedSave, createStateHash])
 
-  // Cleanup timeout on unmount
+
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -313,12 +313,12 @@ export const useAutosave = ({
     }
   }, [])
 
-  // Reset last saved hash when design changes
+ 
   useEffect(() => {
     lastSavedRef.current = ''
   }, [selectedDesign?._id])
 
-  // Force save function for manual triggers
+ 
   const forceSave = useCallback(async () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
@@ -326,7 +326,7 @@ export const useAutosave = ({
     await performSave()
   }, [performSave])
 
-  // Get save statistics
+  
   const getSaveStats = useCallback(() => {
     return {
       pendingChanges: pendingChanges.length,

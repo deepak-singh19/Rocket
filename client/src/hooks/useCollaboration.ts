@@ -153,11 +153,11 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
 
     // Element operation events
     socket.on('element_operation', (operation: ElementOperation) => {
-      console.log('🔄 useCollaboration: Received element_operation from server:', operation)
+      console.log('useCollaboration: Received element_operation from server:', operation)
       
       // Don't process our own operations
       if (operation.userId === currentUserRef.current?.id) {
-        console.log('🔄 useCollaboration: Ignoring own operation')
+        console.log(' useCollaboration: Ignoring own operation')
         return
       }
 
@@ -183,26 +183,26 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
             if (operation.updates) {
               // Handle z-index operations
               if (operation.updates.zIndex) {
-                console.log('🔄 useCollaboration: Processing z-index operation:', operation.updates.zIndex, 'for element:', operation.elementId)
+                console.log(' useCollaboration: Processing z-index operation:', operation.updates.zIndex, 'for element:', operation.elementId)
                 switch (operation.updates.zIndex) {
                   case 'front':
-                    console.log('🚀 useCollaboration: Bringing to front')
+                    console.log(' useCollaboration: Bringing to front')
                     dispatch(bringToFront(operation.elementId))
                     break
                   case 'back':
-                    console.log('🚀 useCollaboration: Sending to back')
+                    console.log(' useCollaboration: Sending to back')
                     dispatch(sendToBack(operation.elementId))
                     break
                   case 'forward':
-                    console.log('🚀 useCollaboration: Moving forward')
+                    console.log(' useCollaboration: Moving forward')
                     dispatch(bringForward(operation.elementId))
                     break
                   case 'backward':
-                    console.log('🚀 useCollaboration: Moving backward')
+                    console.log('useCollaboration: Moving backward')
                     dispatch(sendBackward(operation.elementId))
                     break
                   default:
-                    console.log('🔄 useCollaboration: Unknown z-index operation:', operation.updates.zIndex)
+                    console.log(' useCollaboration: Unknown z-index operation:', operation.updates.zIndex)
                     // Regular position update
                     dispatch(updateElement({ id: operation.elementId, updates: operation.updates }))
                 }
@@ -304,9 +304,9 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
 
   // Broadcast element operations
   const broadcastElementOperation = useCallback((operation: Omit<ElementOperation, 'userId' | 'timestamp' | 'designId'>) => {
-    console.log('🔄 useCollaboration: Broadcasting operation:', operation)
+    console.log(' useCollaboration: Broadcasting operation:', operation)
     if (!state.socket || !state.isConnected || !designId || !currentUserRef.current) {
-      console.log('❌ useCollaboration: Cannot broadcast - not ready:', {
+      console.log('useCollaboration: Cannot broadcast - not ready:', {
         hasSocket: !!state.socket,
         isConnected: state.isConnected,
         hasDesignId: !!designId,
@@ -322,7 +322,7 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
       timestamp: Date.now()
     }
 
-    console.log('🚀 useCollaboration: Emitting element_operation:', fullOperation)
+    console.log('useCollaboration: Emitting element_operation:', fullOperation)
     state.socket.emit('element_operation', fullOperation)
   }, [state.socket, state.isConnected, designId])
 
