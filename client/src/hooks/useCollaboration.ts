@@ -57,7 +57,7 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
     if (!designId) return
 
     // Create socket connection
-    const socket = io('http://localhost:4000', {
+    const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:4000', {
       transports: ['websocket', 'polling'],
       timeout: 10000,
       forceNew: true

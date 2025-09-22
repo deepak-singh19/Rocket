@@ -1,6 +1,11 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+// Build API URL with proper slash handling
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api` 
+  : 'http://localhost:4000/api'
+console.log('🔗 AuthService VITE_API_URL:', import.meta.env.VITE_API_URL)
+console.log('🔗 AuthService API_BASE_URL:', API_BASE_URL)
 
 export interface LoginRequest {
   email: string
@@ -95,7 +100,7 @@ class AuthService {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await axios.get<{ success: boolean; data: User }>(`${API_BASE_URL}/auth/me`)
+    const response = await axios.get<{ success: boolean; data: User }>(`${API_BASE_URL}/auth/verify`)
     return response.data.data
   }
 

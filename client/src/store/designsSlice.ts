@@ -2,7 +2,9 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import axios from 'axios'
 import { Design, DesignState, CreateDesignRequest, UpdateDesignRequest, PaginatedResponse } from '../types'
 
-const API_BASE_URL = 'http://localhost:4000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api` 
+  : 'http://localhost:4000/api'
 
 // Async thunks
 export const fetchDesigns = createAsyncThunk(
