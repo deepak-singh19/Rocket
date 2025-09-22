@@ -15,7 +15,41 @@ import { securityMiddleware } from './middleware/security.js'
 // Load environment variables
 dotenv.config()
 
+
 const app = express()
+
+//
+// ====== TOP-LEVEL PRELIGHT (paste right after dotenv.config(), BEFORE any app.use) ======
+app.use((req, res, next) => {
+  // quick pass-through for requests that are not preflight
+  if (req.method !== 'OPTIONS') return next();
+
+  // Log preflight so we can diagnose
+  console.log(`[PREFLIGHT] ${new Date().toISOString()} ${req.method} ${req.originalUrl} origin=${req.headers.origin || 'none'}`);
+
+  try {
+    const origin = (req.headers.origin as string) || '*';
+
+    // Set CORS response headers expected by browsers
+    // If you want to restrict origins later, change origin handling here.
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type,Authorization,X-Requested-With');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Vary', 'Origin');
+
+    // success - no body
+    return res.status(204).send();
+  } catch (err) {
+    console.error('[PREFLIGHT-ERR]', err && (err as any).stack ? (err as any).stack : err);
+    // If something unexpected happens here, return a benign 204 to avoid blocking the browser flow
+    return res.status(204).send();
+  }
+});
+// =======================================================================================
+
+
+
 const PORT = process.env.PORT || 4000
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/canvas-studio'
 
