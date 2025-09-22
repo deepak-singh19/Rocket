@@ -29,31 +29,23 @@ mongoose.connect(MONGODB_URI)
     process.exit(1)
   })
 
-// CORS middleware - must be applied before security middleware
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://rocket-deepaksingh16cs.replit.app',
-  // add any other allowed origins here
-]
 
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    // allow tools like curl/postman with no origin
-    if (!origin) return callback(null, true)
-    if (allowedOrigins.includes(origin)) return callback(null, true)
-    return callback(new Error('CORS: Origin not allowed'))
-  },
-  credentials: true, // allows cookies / Authorization header
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 204
-}
-
-app.use(cors(corsOptions))
-
-// make sure preflight OPTIONS requests always get CORS headers
-app.options('*', cors(corsOptions))
-
+  app.use(cors({
+    origin: true,            // reflect request origin (works with credentials)
+    credentials: true,
+    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+    allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
+    optionsSuccessStatus: 204
+  }));
+  
+  // ensure preflight always receives proper CORS headers
+  app.options('*', cors({ origin: true, credentials: true }));
+  
+  // Lightweight request logger to help debug preflight / CORS issues
+  app.use((req, _res, next) => {
+    console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.originalUrl} origin=${req.headers.origin || 'none'}`);
+    next();
+  });
 
 
 // Security middleware stack
