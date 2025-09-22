@@ -431,8 +431,19 @@ export const securityMonitoring = (req: Request, res: Response, next: NextFuncti
   next()
 }
 
+
+// short-circuit OPTIONS preflight before any heavy security checks
+const preflightPassthrough = (req: Request, _res: Response, next: NextFunction) => {
+  if (req.method === 'OPTIONS') {
+    // quick-return for preflight so other middleware (rate-limit, validators, etc.) can't throw
+    return next()
+  }
+  next()
+}
+
 // Export security middleware stack
 export const securityMiddleware = [
+  preflightPassthrough,
   securityHeaders,
   mongoSanitization,
   requestSizeLimit,

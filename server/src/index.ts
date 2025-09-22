@@ -40,12 +40,19 @@ mongoose.connect(MONGODB_URI)
   
   // ensure preflight always receives proper CORS headers
   app.options('*', cors({ origin: true, credentials: true }));
+
+  app.options('*', (req, res) => {
+    // quick 204 for any preflight; no middleware will run
+    console.log(`[SHORTCIRCUIT] ${new Date().toISOString()} Preflight ${req.originalUrl} origin=${req.headers.origin || 'none'}`);
+    return res.sendStatus(204);
+  });
   
   // Lightweight request logger to help debug preflight / CORS issues
   app.use((req, _res, next) => {
     console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.originalUrl} origin=${req.headers.origin || 'none'}`);
     next();
   });
+
 
 
 // Security middleware stack
