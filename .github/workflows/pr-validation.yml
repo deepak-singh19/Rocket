@@ -1,0 +1,410 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'client/**'
+      - 'server/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'client/**'
+      - 'server/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+
+env:
+  NODE_VERSION: '18'
+  MONGODB_URI: 'mongodb://localhost:27017/canvas-studio-test'
+
+jobs:
+  # Lint and Type Check
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workspace: [client, server]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install workspace dependencies
+        run: npm install --workspace=${{ matrix.workspace }}
+
+      - name: Run ESLint
+        run: npm run lint --workspace=${{ matrix.workspace }}
+
+      - name: Run TypeScript check
+        run: npm run build --workspace=${{ matrix.workspace }}
+        continue-on-error: false
+
+  # Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workspace: [client, server]
+        node-version: ['18', '20']
+    
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install workspace dependencies
+        run: npm install --workspace=${{ matrix.workspace }}
+
+      - name: Wait for MongoDB
+        run: |
+          timeout 60 bash -c 'until mongosh --eval "db.adminCommand(\"ping\")" > /dev/null 2>&1; do sleep 2; done'
+
+      - name: Run unit tests
+        run: npm run test --workspace=${{ matrix.workspace }}
+        env:
+          MONGODB_URI: ${{ env.MONGODB_URI }}
+
+      - name: Upload coverage reports
+        if: matrix.workspace == 'client'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./client/coverage/lcov.info
+          flags: client
+          name: client-coverage
+
+      - name: Upload coverage reports
+        if: matrix.workspace == 'server'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./server/coverage/lcov.info
+          flags: server
+          name: server-coverage
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install workspace dependencies
+        run: npm install --workspace=server
+
+      - name: Wait for MongoDB
+        run: |
+          timeout 60 bash -c 'until mongosh --eval "db.adminCommand(\"ping\")" > /dev/null 2>&1; do sleep 2; done'
+
+      - name: Seed test data
+        run: npm run seed:users --workspace=server
+        env:
+          MONGODB_URI: ${{ env.MONGODB_URI }}
+
+      - name: Build server
+        run: npm run build --workspace=server
+
+      - name: Start server
+        run: |
+          cd server
+          npm start &
+          sleep 10
+        env:
+          MONGODB_URI: ${{ env.MONGODB_URI }}
+          PORT: 4000
+
+      - name: Run integration tests
+        run: npm run test:integration --workspace=server
+        env:
+          API_BASE_URL: http://localhost:4000
+
+  # E2E Tests
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install workspace dependencies
+        run: npm install --workspace=client --workspace=server
+
+      - name: Wait for MongoDB
+        run: |
+          timeout 60 bash -c 'until mongosh --eval "db.adminCommand(\"ping\")" > /dev/null 2>&1; do sleep 2; done'
+
+      - name: Seed test data
+        run: npm run seed:users --workspace=server
+        env:
+          MONGODB_URI: ${{ env.MONGODB_URI }}
+
+      - name: Build applications
+        run: |
+          npm run build --workspace=server
+          npm run build --workspace=client
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright E2E tests
+        run: npm run test:e2e --workspace=client
+        env:
+          MONGODB_URI: ${{ env.MONGODB_URI }}
+          API_BASE_URL: http://localhost:4000
+          CLIENT_BASE_URL: http://localhost:5173
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: client/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright screenshots
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: playwright-screenshots
+          path: client/test-results/
+          retention-days: 30
+
+  # Security Audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+
+      - name: Run security audit for workspaces
+        run: |
+          npm audit --workspace=client --audit-level=moderate
+          npm audit --workspace=server --audit-level=moderate
+
+  # Build Verification
+  build-verification:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build client
+        run: npm run build --workspace=client
+
+      - name: Build server
+        run: npm run build --workspace=server
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            client/dist/
+            server/dist/
+          retention-days: 7
+
+  # Performance Tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [build-verification]
+    if: github.event_name == 'pull_request'
+    
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install workspace dependencies
+        run: npm install --workspace=server
+
+      - name: Wait for MongoDB
+        run: |
+          timeout 60 bash -c 'until mongosh --eval "db.adminCommand(\"ping\")" > /dev/null 2>&1; do sleep 2; done'
+
+      - name: Seed test data
+        run: npm run seed:users --workspace=server
+        env:
+          MONGODB_URI: ${{ env.MONGODB_URI }}
+
+      - name: Build server
+        run: npm run build --workspace=server
+
+      - name: Start server
+        run: |
+          cd server
+          npm start &
+          sleep 10
+        env:
+          MONGODB_URI: ${{ env.MONGODB_URI }}
+          PORT: 4000
+
+      - name: Run performance tests
+        run: npm run test:performance --workspace=server
+        env:
+          API_BASE_URL: http://localhost:4000
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-results
+          path: server/performance-results/
+          retention-days: 30
+
+  # Summary
+  pr-summary:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, unit-tests, integration-tests, e2e-tests, security-audit, build-verification]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate PR summary
+        run: |
+          echo "## 🚀 PR Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint & Type Check | ${{ needs.lint-and-typecheck.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Audit | ${{ needs.security-audit.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Verification | ${{ needs.build-verification.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- Client: Unit tests with coverage reporting" >> $GITHUB_STEP_SUMMARY
+          echo "- Server: Unit tests with coverage reporting" >> $GITHUB_STEP_SUMMARY
+          echo "- E2E: Playwright tests across multiple browsers" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔍 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Build artifacts available for download" >> $GITHUB_STEP_SUMMARY
+          echo "- Playwright reports and screenshots on failure" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance test results" >> $GITHUB_STEP_SUMMARY

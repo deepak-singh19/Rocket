@@ -1,0 +1,69 @@
+{
+  "name": "canvas-studio",
+  "version": "1.0.0",
+  "description": "A Canvas-based design editor with React frontend and Node.js backend",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspace=client && npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "test": "npm run test --workspace=client && npm run test --workspace=server",
+    "test:client": "npm run test --workspace=client",
+    "test:server": "npm run test --workspace=server",
+    "test:ui": "npm run test:ui --workspace=client & npm run test:ui --workspace=server",
+    "test:ui:client": "npm run test:ui --workspace=client",
+    "test:ui:server": "npm run test:ui --workspace=server",
+    "test:watch": "npm run test:watch --workspace=client & npm run test:watch --workspace=server",
+    "test:watch:client": "npm run test --workspace=client -- --watch",
+    "test:watch:server": "npm run test --workspace=server -- --watch",
+    "test:e2e": "npm run test:e2e --workspace=client",
+    "test:e2e:ui": "npm run test:e2e:ui --workspace=client",
+    "test:e2e:headed": "npm run test:e2e:headed --workspace=client",
+    "test:e2e:debug": "npm run test:e2e:debug --workspace=client",
+    "lint": "npm run lint --workspace=client && npm run lint --workspace=server",
+    "lint:client": "npm run lint --workspace=client",
+    "lint:server": "npm run lint --workspace=server",
+    "clean": "npm run clean --workspace=client && npm run clean --workspace=server",
+    "docker:build": "docker-compose build",
+    "docker:build:client": "docker-compose build client",
+    "docker:build:server": "docker-compose build server",
+    "docker:up": "docker-compose up -d",
+    "docker:up:dev": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:down": "docker-compose down",
+    "docker:down:dev": "docker-compose -f docker-compose.dev.yml down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:dev": "docker-compose -f docker-compose.dev.yml logs -f",
+    "docker:logs:client": "docker-compose logs -f client",
+    "docker:logs:server": "docker-compose logs -f server",
+    "docker:logs:mongodb": "docker-compose logs -f mongodb",
+    "docker:restart": "docker-compose restart",
+    "docker:restart:dev": "docker-compose -f docker-compose.dev.yml restart",
+    "docker:clean": "docker-compose down -v --remove-orphans && docker system prune -f",
+    "docker:clean:dev": "docker-compose -f docker-compose.dev.yml down -v --remove-orphans && docker system prune -f"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "canvas",
+    "design-editor",
+    "react",
+    "typescript",
+    "nodejs",
+    "express"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
