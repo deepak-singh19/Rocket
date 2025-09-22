@@ -30,6 +30,12 @@ router.get('/me',
   authController.getProfile
 )
 
+// GET /api/auth/verify - Verify token and get current user (alias for /me)
+router.get('/verify', 
+  authenticate, 
+  authController.getProfile
+)
+
 // POST /api/auth/logout - User logout
 router.post('/logout', 
   authenticate, 
