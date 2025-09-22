@@ -30,12 +30,15 @@ mongoose.connect(MONGODB_URI)
   })
 
 // CORS middleware - must be applied before security middleware
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}))
+// app.use(cors({
+//   origin: process.env.CLIENT_URL || 'http://localhost:5173',
+//   credentials: true,
+//   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+// }))
+
+app.use(cors())       // allows any origin with Access-Control-Allow-Origin: *
+app.options('*', cors())
 
 // Security middleware stack
 app.use(securityMiddleware)
