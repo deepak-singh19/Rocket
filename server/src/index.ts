@@ -22,7 +22,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/canvas
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)
   .then(() => {
-
+    console.error(' MongoDB connection successful')
   })
   .catch((error) => {
     console.error('❌ MongoDB connection error:', error)
@@ -30,15 +30,31 @@ mongoose.connect(MONGODB_URI)
   })
 
 // CORS middleware - must be applied before security middleware
-// app.use(cors({
-//   origin: process.env.CLIENT_URL || 'http://localhost:5173',
-//   credentials: true,
-//   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-// }))
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://rocket-deepaksingh16cs.replit.app',
+  // add any other allowed origins here
+]
 
-app.use(cors())       // allows any origin with Access-Control-Allow-Origin: *
-app.options('*', cors())
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // allow tools like curl/postman with no origin
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    return callback(new Error('CORS: Origin not allowed'))
+  },
+  credentials: true, // allows cookies / Authorization header
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 204
+}
+
+app.use(cors(corsOptions))
+
+// make sure preflight OPTIONS requests always get CORS headers
+app.options('*', cors(corsOptions))
+
+
 
 // Security middleware stack
 app.use(securityMiddleware)
