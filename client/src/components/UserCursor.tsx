@@ -1,51 +1,75 @@
 import React from 'react'
-import { Group, Line, Text } from 'react-konva'
+import { Circle, Text, Group, Rect } from 'react-konva'
 
-interface UserCursorProps {
-  userId: string
-  userName: string
-  userColor: string
-  x: number
-  y: number
+interface User {
+  id: string
+  name: string
+  cursor?: { x: number; y: number }
 }
 
-const UserCursor: React.FC<UserCursorProps> = ({
-  userId,
-  userName,
-  userColor,
-  x,
-  y
-}) => {
+interface UserCursorProps {
+  user: User
+  currentUserId?: string
+}
+
+const UserCursor: React.FC<UserCursorProps> = ({ user, currentUserId }) => {
+  // Don't show cursor for current user or if no cursor position
+  if (!user.cursor || user.id === currentUserId) {
+    return null
+  }
+
+  // Generate a consistent color for each user based on their ID
+  const getColorFromId = (id: string) => {
+    let hash = 0
+    for (let i = 0; i < id.length; i++) {
+      hash = id.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    const hue = Math.abs(hash) % 360
+    return `hsl(${hue}, 70%, 60%)`
+  }
+
+  const cursorColor = getColorFromId(user.id)
+
   return (
-    <Group>
+    <Group
+      x={user.cursor.x}
+      y={user.cursor.y}
+      listening={false} // Don't interfere with canvas interactions
+    >
       {/* Cursor pointer */}
-      <Line
-        points={[x, y, x + 10, y + 10]}
-        stroke={userColor}
+      <Circle
+        x={0}
+        y={0}
+        radius={4}
+        fill={cursorColor}
+        stroke="white"
         strokeWidth={2}
-        lineCap="round"
-        lineJoin="round"
-      />
-      <Line
-        points={[x + 10, y, x, y + 10]}
-        stroke={userColor}
-        strokeWidth={2}
-        lineCap="round"
-        lineJoin="round"
       />
       
       {/* User name label */}
-      <Text
-        x={x + 15}
-        y={y - 5}
-        text={userName}
-        fontSize={12}
-        fill={userColor}
-        fontStyle="bold"
-        shadowColor="white"
-        shadowBlur={2}
-        shadowOffset={{ x: 1, y: 1 }}
-      />
+      <Group x={8} y={-8}>
+        {/* Background rectangle */}
+        <Rect
+          x={-2}
+          y={-2}
+          width={user.name.length * 7 + 8}
+          height={16}
+          fill={cursorColor}
+          cornerRadius={4}
+          shadowColor="rgba(0,0,0,0.3)"
+          shadowBlur={2}
+          shadowOffset={{ x: 1, y: 1 }}
+        />
+        {/* Text */}
+        <Text
+          x={2}
+          y={1}
+          text={user.name}
+          fontSize={12}
+          fontFamily="Arial, sans-serif"
+          fill="white"
+        />
+      </Group>
     </Group>
   )
 }

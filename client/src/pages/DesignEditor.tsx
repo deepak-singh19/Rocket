@@ -351,7 +351,7 @@ const DesignEditor: React.FC = () => {
 
               {/* Right Sidebar - Properties */}
               <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-                <RightProperties />
+                <RightProperties collaboration={collaboration} />
               </div>
             </div>
           </div>

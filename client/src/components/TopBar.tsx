@@ -357,7 +357,19 @@ const TopBar: React.FC<TopBarProps> = ({ collaboration }) => {
               
               {/* Layer Order Test Buttons */}
               <button
-                onClick={() => selectedElementId && dispatch(bringForward(selectedElementId))}
+                onClick={() => {
+                  if (selectedElementId) {
+                    dispatch(bringForward(selectedElementId))
+                    // Broadcast to other users
+                    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+                      collaboration.broadcastElementOperation({
+                        type: 'element_moved',
+                        elementId: selectedElementId,
+                        updates: { zIndex: 'forward' }
+                      })
+                    }
+                  }
+                }}
                 disabled={!selectedElementId}
                 className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="Bring Forward (Ctrl+])"
@@ -366,7 +378,19 @@ const TopBar: React.FC<TopBarProps> = ({ collaboration }) => {
                 <span>Forward</span>
               </button>
               <button
-                onClick={() => selectedElementId && dispatch(sendBackward(selectedElementId))}
+                onClick={() => {
+                  if (selectedElementId) {
+                    dispatch(sendBackward(selectedElementId))
+                    // Broadcast to other users
+                    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+                      collaboration.broadcastElementOperation({
+                        type: 'element_moved',
+                        elementId: selectedElementId,
+                        updates: { zIndex: 'backward' }
+                      })
+                    }
+                  }
+                }}
                 disabled={!selectedElementId}
                 className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="Send Backward (Ctrl+[)"

@@ -28,8 +28,18 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   const dispatch = useDispatch<AppDispatch>()
   const { selectedDesign } = useSelector((state: RootState) => state.designs)
 
-  const handleLayerAction = (action: () => void) => {
+  const handleLayerAction = (action: () => void, zIndexType?: string) => {
     action()
+    
+    // Broadcast z-index operation to other users
+    if (elementId && zIndexType && collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+      collaboration.broadcastElementOperation({
+        type: 'element_moved',
+        elementId,
+        updates: { zIndex: zIndexType }
+      })
+    }
+    
     onClose()
   }
 
@@ -69,7 +79,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       </div>
       
       <button
-        onClick={() => handleLayerAction(() => dispatch(bringToFront(elementId)))}
+        onClick={() => handleLayerAction(() => dispatch(bringToFront(elementId)), 'front')}
         className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
       >
         <span>🔝</span>
@@ -78,7 +88,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       </button>
       
       <button
-        onClick={() => handleLayerAction(() => dispatch(bringForward(elementId)))}
+        onClick={() => handleLayerAction(() => dispatch(bringForward(elementId)), 'forward')}
         className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
       >
         <span>⬆️</span>
@@ -87,7 +97,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       </button>
       
       <button
-        onClick={() => handleLayerAction(() => dispatch(sendBackward(elementId)))}
+        onClick={() => handleLayerAction(() => dispatch(sendBackward(elementId)), 'backward')}
         className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
       >
         <span>⬇️</span>
@@ -96,7 +106,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       </button>
       
       <button
-        onClick={() => handleLayerAction(() => dispatch(sendToBack(elementId)))}
+        onClick={() => handleLayerAction(() => dispatch(sendToBack(elementId)), 'back')}
         className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
       >
         <span>🔻</span>

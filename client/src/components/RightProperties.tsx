@@ -3,8 +3,13 @@ import { useSelector, useDispatch } from 'react-redux'
 import { RootState, AppDispatch } from '../store'
 import { updateElement, addElement } from '../store/canvasSlice'
 import { CanvasElement } from '../types'
+import { CollaborationHookReturn } from '../hooks/useCollaboration'
 
-const RightProperties: React.FC = () => {
+interface RightPropertiesProps {
+  collaboration?: CollaborationHookReturn
+}
+
+const RightProperties: React.FC<RightPropertiesProps> = ({ collaboration }) => {
   const dispatch = useDispatch<AppDispatch>()
   const { elements, selectedElement } = useSelector((state: RootState) => state.canvas)
 
@@ -13,10 +18,22 @@ const RightProperties: React.FC = () => {
   const handlePropertyChange = (property: string, value: any) => {
     if (!selectedElement) return
     
+    const updates = { [property]: value }
+    
+    // Apply local update
     dispatch(updateElement({
       id: selectedElement,
-      updates: { [property]: value }
+      updates
     }))
+    
+    // Broadcast to other users
+    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+      collaboration.broadcastElementOperation({
+        type: 'element_updated',
+        elementId: selectedElement,
+        updates
+      })
+    }
   }
 
   const addNewElement = (type: CanvasElement['type']) => {
@@ -47,7 +64,17 @@ const RightProperties: React.FC = () => {
       })
     }
 
+    // Apply local update
     dispatch(addElement(newElement))
+    
+    // Broadcast to other users
+    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+      collaboration.broadcastElementOperation({
+        type: 'element_added',
+        elementId: newElement.id,
+        element: newElement
+      })
+    }
   }
 
   return (

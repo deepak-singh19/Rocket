@@ -79,9 +79,18 @@ class CollaborationHandler {
       socket.on('element_operation', (data: ElementOperation) => {
         try {
           const { designId, elementId, type, element, updates, userId } = data
+          
+          console.log('🔄 Server: Received element_operation:', {
+            type,
+            elementId,
+            updates,
+            userId,
+            designId
+          })
 
           // Validate input
           if (!designId || !elementId || !type || !userId) {
+            console.log('❌ Server: Missing required fields')
             socket.emit('error', { message: 'Missing required fields' })
             return
           }
@@ -89,6 +98,7 @@ class CollaborationHandler {
           // Check if user is in the room
           const user = this.users.get(socket.id)
           if (!user || user.designId !== designId) {
+            console.log('❌ Server: User not in design room')
             socket.emit('error', { message: 'User not in design room' })
             return
           }
@@ -99,6 +109,11 @@ class CollaborationHandler {
             timestamp: Date.now()
           }
 
+          // Check how many users are in the room
+          const roomUsers = Array.from(this.users.values()).filter(u => u.designId === designId)
+          console.log('🚀 Server: Broadcasting element_operation to room:', designId, 'with', roomUsers.length, 'total users')
+          console.log('🚀 Server: Room users:', roomUsers.map(u => ({ id: u.id, name: u.name })))
+          
           socket.to(designId).emit('element_operation', operation)
 
         } catch (error) {
@@ -125,6 +140,25 @@ class CollaborationHandler {
           }
         } catch (error) {
           console.error('❌ Error in cursor_move:', error)
+        }
+      })
+
+      // Element selection
+      socket.on('user_selection', (data: { designId: string; elementId: string | null; userId: string; userName: string }) => {
+        try {
+          const { designId, elementId } = data
+          const user = this.users.get(socket.id)
+          
+          if (user && user.designId === designId) {
+            // Broadcast selection to other users in the room
+            socket.to(designId).emit('user_selection', {
+              userId: socket.id,
+              userName: user.name,
+              elementId: elementId
+            })
+          }
+        } catch (error) {
+          console.error('❌ Error in user_selection:', error)
         }
       })
 

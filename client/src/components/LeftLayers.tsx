@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState, AppDispatch } from '../store'
+import { CollaborationHookReturn } from '../hooks/useCollaboration'
 import { 
   selectElement, 
   clearSelection, 
@@ -15,7 +16,6 @@ import {
   bringForward,
   sendBackward
 } from '../store/canvasSlice'
-import { CollaborationHookReturn } from '../hooks/useCollaboration'
 
 interface LeftLayersProps {
   collaboration?: CollaborationHookReturn
@@ -31,6 +31,11 @@ const LeftLayers: React.FC<LeftLayersProps> = ({ collaboration }) => {
 
   const handleElementSelect = (elementId: string) => {
     dispatch(selectElement(elementId))
+    
+    // Broadcast selection to other users
+    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementSelection) {
+      collaboration.broadcastElementSelection(elementId)
+    }
   }
 
   const handleElementDelete = (elementId: string) => {
@@ -49,19 +54,59 @@ const LeftLayers: React.FC<LeftLayersProps> = ({ collaboration }) => {
   }
 
   const handleMoveToFront = (elementId: string) => {
+    // Apply local update
     dispatch(bringToFront(elementId))
+    
+    // Broadcast to other users
+    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+      collaboration.broadcastElementOperation({
+        type: 'element_moved',
+        elementId,
+        updates: { zIndex: 'front' }
+      })
+    }
   }
 
   const handleMoveToBack = (elementId: string) => {
+    // Apply local update
     dispatch(sendToBack(elementId))
+    
+    // Broadcast to other users
+    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+      collaboration.broadcastElementOperation({
+        type: 'element_moved',
+        elementId,
+        updates: { zIndex: 'back' }
+      })
+    }
   }
 
   const handleMoveForward = (elementId: string) => {
+    // Apply local update
     dispatch(bringForward(elementId))
+    
+    // Broadcast to other users
+    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+      collaboration.broadcastElementOperation({
+        type: 'element_moved',
+        elementId,
+        updates: { zIndex: 'forward' }
+      })
+    }
   }
 
   const handleMoveBackward = (elementId: string) => {
+    // Apply local update
     dispatch(sendBackward(elementId))
+    
+    // Broadcast to other users
+    if (collaboration && collaboration.isConnected && collaboration.currentUser && collaboration.broadcastElementOperation) {
+      collaboration.broadcastElementOperation({
+        type: 'element_moved',
+        elementId,
+        updates: { zIndex: 'backward' }
+      })
+    }
   }
 
   const handleStartRename = (elementId: string, currentName: string) => {
@@ -170,14 +215,36 @@ const LeftLayers: React.FC<LeftLayersProps> = ({ collaboration }) => {
               const isEditing = editingElement === element.id
               const elementName = getElementName(element)
               
+              // Check if any other user has this element selected
+              const userWithSelection = collaboration?.users?.find(user => 
+                user.id !== collaboration?.currentUser?.id && 
+                user.selectedElement === element.id
+              )
+              
+              // Generate user color for selection indicator
+              const getUserColor = (userId: string) => {
+                let hash = 0
+                for (let i = 0; i < userId.length; i++) {
+                  hash = userId.charCodeAt(i) + ((hash << 5) - hash)
+                }
+                const hue = Math.abs(hash) % 360
+                return `hsl(${hue}, 70%, 60%)`
+              }
+              
               return (
                 <div
                   key={element.id}
                   className={`group relative p-3 mb-1 rounded-lg border cursor-pointer transition-colors ${
                     isSelected 
                       ? 'bg-primary-50 border-primary-200' 
-                      : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      : userWithSelection 
+                        ? 'bg-orange-50 border-orange-200' 
+                        : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
+                  style={userWithSelection ? {
+                    borderLeftWidth: '4px',
+                    borderLeftColor: getUserColor(userWithSelection.id)
+                  } : {}}
                   onClick={() => !isEditing && handleElementSelect(element.id)}
                 >
                   <div className="flex items-center space-x-3">
@@ -198,8 +265,16 @@ const LeftLayers: React.FC<LeftLayersProps> = ({ collaboration }) => {
                           <div className="text-sm font-medium text-gray-900 truncate">
                             {elementName}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {element.type} • {Math.round(element.x)}, {Math.round(element.y)}
+                          <div className="text-xs text-gray-500 flex items-center gap-2">
+                            <span>{element.type} • {Math.round(element.x)}, {Math.round(element.y)}</span>
+                            {userWithSelection && (
+                              <span 
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-white"
+                                style={{ backgroundColor: getUserColor(userWithSelection.id) }}
+                              >
+                                👤 {userWithSelection.name}
+                              </span>
+                            )}
                           </div>
                         </>
                       )}

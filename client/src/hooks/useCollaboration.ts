@@ -2,13 +2,14 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useDispatch } from 'react-redux'
 import { AppDispatch } from '../store'
-import { addElement, updateElement, removeElement } from '../store/canvasSlice'
+import { addElement, updateElement, removeElement, bringToFront, sendToBack, bringForward, sendBackward } from '../store/canvasSlice'
 import { refreshDesign } from '../store/designsSlice'
 
 interface User {
   id: string
   name: string
   cursor?: { x: number; y: number }
+  selectedElement?: string | null
 }
 
 interface ElementOperation {
@@ -20,6 +21,16 @@ interface ElementOperation {
   userId: string
   timestamp: number
 }
+
+// SelectionOperation interface for future use
+// interface SelectionOperation {
+//   type: 'element_selected' | 'element_deselected'
+//   designId: string
+//   elementId: string | null
+//   userId: string
+//   userName: string
+//   timestamp: number
+// }
 
 interface CollaborationState {
   isConnected: boolean
@@ -35,6 +46,7 @@ export interface CollaborationHookReturn {
   currentUser: User | null
   broadcastElementOperation: (operation: Omit<ElementOperation, 'userId' | 'timestamp' | 'designId'>) => void
   broadcastCursorMove: (x: number, y: number) => void
+  broadcastElementSelection: (elementId: string | null) => void
   broadcastRefreshSignal: () => void
 }
 
@@ -101,7 +113,7 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
       isJoiningRef.current = false
     })
 
-    socket.on('reconnect', (attemptNumber) => {
+        socket.on('reconnect', () => {
       // Re-join design room after reconnection
       if (designId && !isJoiningRef.current) {
         isJoiningRef.current = true
@@ -141,8 +153,11 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
 
     // Element operation events
     socket.on('element_operation', (operation: ElementOperation) => {
+      console.log('🔄 useCollaboration: Received element_operation from server:', operation)
+      
       // Don't process our own operations
       if (operation.userId === currentUserRef.current?.id) {
+        console.log('🔄 useCollaboration: Ignoring own operation')
         return
       }
 
@@ -166,7 +181,35 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
             
           case 'element_moved':
             if (operation.updates) {
-              dispatch(updateElement({ id: operation.elementId, updates: operation.updates }))
+              // Handle z-index operations
+              if (operation.updates.zIndex) {
+                console.log('🔄 useCollaboration: Processing z-index operation:', operation.updates.zIndex, 'for element:', operation.elementId)
+                switch (operation.updates.zIndex) {
+                  case 'front':
+                    console.log('🚀 useCollaboration: Bringing to front')
+                    dispatch(bringToFront(operation.elementId))
+                    break
+                  case 'back':
+                    console.log('🚀 useCollaboration: Sending to back')
+                    dispatch(sendToBack(operation.elementId))
+                    break
+                  case 'forward':
+                    console.log('🚀 useCollaboration: Moving forward')
+                    dispatch(bringForward(operation.elementId))
+                    break
+                  case 'backward':
+                    console.log('🚀 useCollaboration: Moving backward')
+                    dispatch(sendBackward(operation.elementId))
+                    break
+                  default:
+                    console.log('🔄 useCollaboration: Unknown z-index operation:', operation.updates.zIndex)
+                    // Regular position update
+                    dispatch(updateElement({ id: operation.elementId, updates: operation.updates }))
+                }
+              } else {
+                // Regular position update
+                dispatch(updateElement({ id: operation.elementId, updates: operation.updates }))
+              }
             }
             break
         }
@@ -182,6 +225,23 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
         users: prev.users.map(user => 
           user.id === data.userId 
             ? { ...user, cursor: data.cursor }
+            : user
+        )
+      }))
+    })
+
+    // Selection events
+    socket.on('user_selection', (data: { userId: string; userName: string; elementId: string | null }) => {
+      // Don't process our own selections
+      if (data.userId === currentUserRef.current?.id) {
+        return
+      }
+
+      setState(prev => ({
+        ...prev,
+        users: prev.users.map(user => 
+          user.id === data.userId 
+            ? { ...user, selectedElement: data.elementId }
             : user
         )
       }))
@@ -244,7 +304,14 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
 
   // Broadcast element operations
   const broadcastElementOperation = useCallback((operation: Omit<ElementOperation, 'userId' | 'timestamp' | 'designId'>) => {
+    console.log('🔄 useCollaboration: Broadcasting operation:', operation)
     if (!state.socket || !state.isConnected || !designId || !currentUserRef.current) {
+      console.log('❌ useCollaboration: Cannot broadcast - not ready:', {
+        hasSocket: !!state.socket,
+        isConnected: state.isConnected,
+        hasDesignId: !!designId,
+        hasCurrentUser: !!currentUserRef.current
+      })
       return
     }
 
@@ -255,6 +322,7 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
       timestamp: Date.now()
     }
 
+    console.log('🚀 useCollaboration: Emitting element_operation:', fullOperation)
     state.socket.emit('element_operation', fullOperation)
   }, [state.socket, state.isConnected, designId])
 
@@ -265,6 +333,20 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
     }
 
     state.socket.emit('cursor_move', { designId, x, y })
+  }, [state.socket, state.isConnected, designId])
+
+  // Broadcast element selection
+  const broadcastElementSelection = useCallback((elementId: string | null) => {
+    if (!state.socket || !state.isConnected || !designId || !currentUserRef.current) {
+      return
+    }
+
+    state.socket.emit('user_selection', {
+      designId,
+      elementId,
+      userId: currentUserRef.current.id,
+      userName: currentUserRef.current.name
+    })
   }, [state.socket, state.isConnected, designId])
 
   // Broadcast refresh signal to other clients
@@ -287,6 +369,7 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
     currentUser: state.currentUser,
     broadcastElementOperation,
     broadcastCursorMove,
+    broadcastElementSelection,
     broadcastRefreshSignal
   }
 }

@@ -8,7 +8,6 @@ import { CollaborationHookReturn } from '../hooks/useCollaboration'
 import { useCanvas } from '../contexts/CanvasContext'
 import { useComments } from '../hooks/useComments'
 import ImageElement from './ImageElement'
-import GhostElement from './GhostElement'
 import UserCursor from './UserCursor'
 import ContextMenu from './ContextMenu'
 import CommentMarker from './CommentMarker'
@@ -49,11 +48,10 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ collaboration }) => {
   const {
     isConnected = false,
     currentUser = null,
-    roomUsers = [],
-    ghostElements = [],
-    userCursors = new Map(),
+    users = [],
     broadcastElementOperation = () => {},
     broadcastCursorMove = () => {},
+    broadcastElementSelection = () => {},
     broadcastElementDragStart = () => {},
     broadcastElementDragMove = () => {},
     broadcastElementDragEnd = () => {}
@@ -146,6 +144,11 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ collaboration }) => {
     if (e.target === e.target.getStage()) {
       dispatch(clearSelection())
       
+      // Broadcast deselection to other users
+      if (collaboration && collaboration.isConnected && collaboration.currentUser) {
+        broadcastElementSelection(null)
+      }
+      
       // Handle comment mode - add comment at click position
       if (isCommentMode && e.evt.detail === 2) { // Double click to add comment
         const pos = e.target.getStage()?.getPointerPosition()
@@ -165,8 +168,12 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ collaboration }) => {
   }
 
   const handleElementClick = (elementId: string) => {
-
     dispatch(selectElement(elementId))
+    
+    // Broadcast selection to other users
+    if (collaboration && collaboration.isConnected && collaboration.currentUser) {
+      broadcastElementSelection(elementId)
+    }
   }
 
   const handleElementRightClick = (e: Konva.KonvaEventObject<PointerEvent>, elementId: string) => {
@@ -248,14 +255,22 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ collaboration }) => {
     }
   }
 
+  // Throttle cursor movement to avoid flooding the server
+  const cursorMoveTimeoutRef = useRef<number | null>(null)
+  
   const handleStageMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     try {
       const pos = e.target.getStage()?.getPointerPosition()
       if (pos) {
-        // Broadcast cursor movement
-        broadcastCursorMove(pos.x, pos.y)
+        // Throttle cursor broadcasting to 10fps (100ms)
+        if (cursorMoveTimeoutRef.current) {
+          clearTimeout(cursorMoveTimeoutRef.current)
+        }
+        cursorMoveTimeoutRef.current = window.setTimeout(() => {
+          broadcastCursorMove(pos.x, pos.y)
+        }, 100)
         
-        // Update drawing if currently drawing
+        // Update drawing if currently drawing (no throttling for drawing)
         if (drawingState.isDrawing) {
           dispatch(updateDrawing({ x: pos.x, y: pos.y }))
         }
@@ -518,22 +533,53 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ collaboration }) => {
               </React.Fragment>
             ))}
             
-            {/* Ghost elements (other users dragging) */}
-            {ghostElements.map(ghost => (
-              <GhostElement key={ghost.id} ghost={ghost} />
-            ))}
-            
-            {/* User cursors */}
-            {Array.from(userCursors.entries()).map(([userId, cursor]) => (
+            {/* User cursors - show other users' cursors with their names */}
+            {users.map(user => (
               <UserCursor
-                key={userId}
-                userId={userId}
-                userName={cursor.name}
-                userColor={cursor.color}
-                x={cursor.x}
-                y={cursor.y}
+                key={user.id}
+                user={user}
+                currentUserId={currentUser?.id}
               />
             ))}
+
+            {/* Selection indicators for other users */}
+            {users.map(user => {
+              if (!user.selectedElement || user.id === currentUser?.id) {
+                return null
+              }
+
+              const selectedElementData = elements.find(el => el.id === user.selectedElement)
+              if (!selectedElementData) {
+                return null
+              }
+
+              // Generate user color
+              const getColorFromId = (id: string) => {
+                let hash = 0
+                for (let i = 0; i < id.length; i++) {
+                  hash = id.charCodeAt(i) + ((hash << 5) - hash)
+                }
+                const hue = Math.abs(hash) % 360
+                return `hsl(${hue}, 70%, 60%)`
+              }
+
+              const userColor = getColorFromId(user.id)
+
+              return (
+                <Rect
+                  key={`selection-${user.id}`}
+                  x={selectedElementData.x - 2}
+                  y={selectedElementData.y - 2}
+                  width={selectedElementData.width + 4}
+                  height={selectedElementData.height + 4}
+                  stroke={userColor}
+                  strokeWidth={2}
+                  dash={[5, 5]}
+                  fill="transparent"
+                  listening={false}
+                />
+              )
+            })}
             
             {/* Current drawing path */}
             {drawingState.isDrawing && drawingState.currentPath && (
