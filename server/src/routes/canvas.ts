@@ -1,18 +1,18 @@
 import { Router } from 'express'
-import { CanvasController } from '../controllers/canvasController.js'
+import { DesignController } from '../controllers/canvasController.js'
 
 const router = Router()
-const canvasController = new CanvasController()
+const designController = new DesignController()
 
-// Canvas CRUD operations
-router.get('/', canvasController.getAllCanvases)
-router.get('/:id', canvasController.getCanvasById)
-router.post('/', canvasController.createCanvas)
-router.put('/:id', canvasController.updateCanvas)
-router.delete('/:id', canvasController.deleteCanvas)
+// Design CRUD operations  
+router.get('/', designController.getDesigns)
+router.get('/:id', designController.getDesignById)
+router.post('/', designController.createDesign)
+router.put('/:id', designController.updateDesign)
+router.delete('/:id', designController.deleteDesign)
 
-// Canvas export operations
-router.post('/:id/export', canvasController.exportCanvas)
-router.post('/:id/save-image', canvasController.saveCanvasImage)
+// Design save operations
+router.put('/:id/save', designController.saveDesign)
+router.put('/:id/thumbnail', designController.updateThumbnail)
 
 export { router as canvasRouter }

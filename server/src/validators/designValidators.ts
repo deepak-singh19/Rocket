@@ -96,8 +96,8 @@ export const addCommentSchema = z.object({
 
 // Query parameter validation
 export const designQuerySchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).optional().default(1),
-  limit: z.string().regex(/^\d+$/).transform(Number).optional().default(10),
+  page: z.string().regex(/^\d+$/).transform(Number).optional().default('1'),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional().default('10'),
   search: z.string().trim().optional(),
   createdBy: z.string().trim().optional(),
   sortBy: z.enum(['name', 'updatedAt', 'createdAt']).optional().default('updatedAt'),

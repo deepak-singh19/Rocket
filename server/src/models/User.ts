@@ -14,6 +14,7 @@ export interface IUser extends Document {
   
   // Methods
   comparePassword(candidatePassword: string): Promise<boolean>
+  updateLastLogin(): Promise<IUser>
   toJSON(): any
 }
 
@@ -54,8 +55,8 @@ const userSchema = new Schema<IUser>({
   timestamps: true,
   toJSON: {
     transform: function(doc, ret) {
-      delete ret.password
-      delete ret.__v
+      delete (ret as any).password
+      delete (ret as any).__v
       return ret
     }
   }
@@ -92,4 +93,9 @@ userSchema.statics.findByEmail = function(email: string) {
   return this.findOne({ email: email.toLowerCase() }).select('+password')
 }
 
-export const User = mongoose.model<IUser>('User', userSchema)
+// Interface for static methods
+interface IUserModel extends mongoose.Model<IUser> {
+  findByEmail(email: string): Promise<IUser | null>
+}
+
+export const User = mongoose.model<IUser, IUserModel>('User', userSchema)

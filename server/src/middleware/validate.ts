@@ -3,7 +3,7 @@ import { AnyZodObject, ZodError } from 'zod'
 
 // Validation middleware factory
 export const validate = (schema: AnyZodObject) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await schema.parseAsync({
         body: req.body,
@@ -13,7 +13,7 @@ export const validate = (schema: AnyZodObject) => {
       next()
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Validation failed',
           details: error.errors.map(err => ({
@@ -21,9 +21,10 @@ export const validate = (schema: AnyZodObject) => {
             message: err.message
           }))
         })
+        return
       }
       
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
         error: 'Internal server error during validation'
       })

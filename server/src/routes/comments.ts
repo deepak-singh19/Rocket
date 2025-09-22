@@ -1,6 +1,6 @@
 import express from 'express'
-import { authenticate as auth } from '../middleware/auth'
-import { validate } from '../middleware/validate'
+import { authenticate as auth } from '../middleware/auth.js'
+import { validate } from '../middleware/validate.js'
 import {
   createComment,
   getComments,
@@ -9,7 +9,7 @@ import {
   deleteComment,
   resolveComment,
   getDesignUsers
-} from '../controllers/commentController'
+} from '../controllers/commentController.js'
 import {
   createCommentSchema,
   updateCommentSchema,
@@ -17,7 +17,7 @@ import {
   resolveCommentSchema,
   commentIdSchema,
   designIdSchema
-} from '../validators/commentValidators'
+} from '../validators/commentValidators.js'
 
 const router = express.Router()
 

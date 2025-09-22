@@ -5,6 +5,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-i
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'
 
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required')
+}
+
 export interface JWTPayload {
   userId: string
   email: string
@@ -26,11 +30,11 @@ export const generateAccessToken = (user: IUser): string => {
     name: user.name
   }
 
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, JWT_SECRET as string, {
     expiresIn: JWT_EXPIRES_IN,
     issuer: 'canvas-studio',
     audience: 'canvas-studio-users'
-  })
+  } as jwt.SignOptions)
 }
 
 // Generate refresh token
@@ -40,11 +44,11 @@ export const generateRefreshToken = (user: IUser): string => {
     type: 'refresh'
   }
 
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, JWT_SECRET as string, {
     expiresIn: JWT_REFRESH_EXPIRES_IN,
     issuer: 'canvas-studio',
     audience: 'canvas-studio-users'
-  })
+  } as jwt.SignOptions)
 }
 
 // Generate both tokens
@@ -108,7 +112,7 @@ export const extractTokenFromHeader = (authHeader: string | undefined): string |
     return null
   }
   
-  return parts[1]
+  return parts[1] || null
 }
 
 // Get token expiration time

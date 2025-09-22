@@ -11,7 +11,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // Clean up test database and close connection
-  await mongoose.connection.db.dropDatabase()
+  if (mongoose.connection.db) {
+    await mongoose.connection.db.dropDatabase()
+  }
   await mongoose.connection.close()
 })
 
@@ -20,6 +22,8 @@ beforeEach(async () => {
   const collections = mongoose.connection.collections
   for (const key in collections) {
     const collection = collections[key]
-    await collection.deleteMany({})
+    if (collection) {
+      await collection.deleteMany({})
+    }
   }
 })

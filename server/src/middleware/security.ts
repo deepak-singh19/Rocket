@@ -1,4 +1,12 @@
 import { Request, Response, NextFunction } from 'express'
+
+// Extend Request interface for file uploads
+interface MulterRequest extends Request {
+  file?: {
+    mimetype: string
+    size: number
+  }
+}
 import rateLimit from 'express-rate-limit'
 import slowDown from 'express-slow-down'
 import helmet from 'helmet'
@@ -107,7 +115,7 @@ export const mongoSanitization = mongoSanitize({
 })
 
 // Request size limiting
-export const requestSizeLimit = (req: Request, res: Response, next: NextFunction) => {
+export const requestSizeLimit = (req: Request, res: Response, next: NextFunction): void => {
   const contentLength = parseInt(req.get('content-length') || '0')
   
   if (contentLength > SECURITY_CONFIG.MAX_JSON_SIZE) {
@@ -118,18 +126,19 @@ export const requestSizeLimit = (req: Request, res: Response, next: NextFunction
       userAgent: req.get('User-Agent')
     })
     
-    return res.status(413).json({
+    res.status(413).json({
       code: 'REQUEST_TOO_LARGE',
       message: 'Request payload too large',
       maxSize: SECURITY_CONFIG.MAX_JSON_SIZE
     })
+    return
   }
   
   next()
 }
 
 // URL length validation
-export const urlLengthValidation = (req: Request, res: Response, next: NextFunction) => {
+export const urlLengthValidation = (req: Request, res: Response, next: NextFunction): void => {
   const url = req.originalUrl
   
   if (url.length > SECURITY_CONFIG.MAX_URL_LENGTH) {
@@ -140,18 +149,19 @@ export const urlLengthValidation = (req: Request, res: Response, next: NextFunct
       userAgent: req.get('User-Agent')
     })
     
-    return res.status(414).json({
+    res.status(414).json({
       code: 'URL_TOO_LONG',
       message: 'Request URL too long',
       maxLength: SECURITY_CONFIG.MAX_URL_LENGTH
     })
+    return
   }
   
   next()
 }
 
 // Header size validation
-export const headerSizeValidation = (req: Request, res: Response, next: NextFunction) => {
+export const headerSizeValidation = (req: Request, res: Response, next: NextFunction): void => {
   const headerSize = JSON.stringify(req.headers).length
   
   if (headerSize > SECURITY_CONFIG.MAX_HEADER_SIZE) {
@@ -162,11 +172,12 @@ export const headerSizeValidation = (req: Request, res: Response, next: NextFunc
       userAgent: req.get('User-Agent')
     })
     
-    return res.status(431).json({
+    res.status(431).json({
       code: 'HEADERS_TOO_LARGE',
       message: 'Request headers too large',
       maxSize: SECURITY_CONFIG.MAX_HEADER_SIZE
     })
+    return
   }
   
   next()
@@ -271,8 +282,8 @@ export const securityLogging = (req: Request, res: Response, next: NextFunction)
 
 // IP whitelist middleware (for admin endpoints)
 export const ipWhitelist = (allowedIPs: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const clientIP = req.ip || req.connection.remoteAddress
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown'
     
     if (!allowedIPs.includes(clientIP)) {
       console.warn(`[SECURITY] IP whitelist violation:`, {
@@ -282,10 +293,11 @@ export const ipWhitelist = (allowedIPs: string[]) => {
         timestamp: new Date().toISOString()
       })
       
-      return res.status(403).json({
+      res.status(403).json({
         code: 'IP_NOT_ALLOWED',
         message: 'Access denied from this IP address'
       })
+      return
     }
     
     next()
@@ -306,11 +318,12 @@ export const validateRequest = (validations: any[]) => {
         userAgent: req.get('User-Agent')
       })
       
-      return res.status(400).json({
+      res.status(400).json({
         code: 'VALIDATION_ERROR',
         message: 'Invalid request data',
         details: errors.array()
       })
+      return
     }
     
     next()
@@ -319,7 +332,7 @@ export const validateRequest = (validations: any[]) => {
 
 // File upload validation
 export const validateFileUpload = (allowedTypes: string[], maxSize: number) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: MulterRequest, res: Response, next: NextFunction): void => {
     if (!req.file) {
       return next()
     }
@@ -333,11 +346,12 @@ export const validateFileUpload = (allowedTypes: string[], maxSize: number) => {
         userAgent: req.get('User-Agent')
       })
       
-      return res.status(400).json({
+      res.status(400).json({
         code: 'INVALID_FILE_TYPE',
         message: 'File type not allowed',
         allowedTypes
       })
+      return
     }
     
     if (size > maxSize) {
@@ -348,11 +362,12 @@ export const validateFileUpload = (allowedTypes: string[], maxSize: number) => {
         userAgent: req.get('User-Agent')
       })
       
-      return res.status(400).json({
+      res.status(400).json({
         code: 'FILE_TOO_LARGE',
         message: 'File size exceeds maximum allowed',
         maxSize
       })
+      return
     }
     
     next()
@@ -360,7 +375,7 @@ export const validateFileUpload = (allowedTypes: string[], maxSize: number) => {
 }
 
 // Security event monitoring
-export const securityMonitoring = (req: Request, res: Response, next: NextFunction) => {
+export const securityMonitoring = (req: Request, res: Response, next: NextFunction): void => {
   // Monitor for potential attacks
   const attackPatterns = [
     { pattern: /\.\./, name: 'Path Traversal' },
@@ -406,10 +421,11 @@ export const securityMonitoring = (req: Request, res: Response, next: NextFuncti
     })
     
     // Optionally block the request
-    return res.status(403).json({
+    res.status(403).json({
       code: 'SECURITY_VIOLATION',
       message: 'Request blocked due to security policy violation'
     })
+    return
   }
   
   next()

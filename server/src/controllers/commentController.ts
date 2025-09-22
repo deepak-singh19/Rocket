@@ -1,18 +1,14 @@
 import { Request, Response } from 'express'
-import { Comment, IComment } from '../models/Comment'
-import { Design } from '../models/Design'
-import { User } from '../models/User'
+import { Comment, IComment } from '../models/Comment.js'
+import { Design } from '../models/Design.js'
+import { User, IUser } from '../models/User.js'
 
 interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string
-    email: string
-    name: string
-  }
+  user?: IUser
 }
 
 // Create a new comment
-export const createComment = async (req: AuthenticatedRequest, res: Response) => {
+export const createComment = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
   try {
     const { designId, content, mentions = [], position, elementId, parentId } = req.body
     const user = req.user!
@@ -42,7 +38,7 @@ export const createComment = async (req: AuthenticatedRequest, res: Response) =>
 
     const comment = new Comment({
       designId,
-      userId: user.id,
+      userId: user._id?.toString() || user.id,
       userName: user.name,
       userEmail: user.email,
       content,
@@ -160,7 +156,7 @@ export const getCommentReplies = async (req: Request, res: Response) => {
 }
 
 // Update a comment
-export const updateComment = async (req: AuthenticatedRequest, res: Response) => {
+export const updateComment = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
   try {
     const { commentId } = req.params
     const { content, mentions = [] } = req.body
@@ -172,7 +168,7 @@ export const updateComment = async (req: AuthenticatedRequest, res: Response) =>
     }
 
     // Only allow comment owner to update
-    if (comment.userId !== user.id) {
+    if (comment.userId !== (user._id?.toString() || user.id)) {
       return res.status(403).json({ error: 'Not authorized to update this comment' })
     }
 
@@ -202,7 +198,7 @@ export const updateComment = async (req: AuthenticatedRequest, res: Response) =>
 }
 
 // Delete a comment
-export const deleteComment = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteComment = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
   try {
     const { commentId } = req.params
     const user = req.user!
@@ -213,7 +209,7 @@ export const deleteComment = async (req: AuthenticatedRequest, res: Response) =>
     }
 
     // Only allow comment owner to delete
-    if (comment.userId !== user.id) {
+    if (comment.userId !== (user._id?.toString() || user.id)) {
       return res.status(403).json({ error: 'Not authorized to delete this comment' })
     }
 
@@ -232,7 +228,7 @@ export const deleteComment = async (req: AuthenticatedRequest, res: Response) =>
 }
 
 // Resolve/unresolve a comment
-export const resolveComment = async (req: AuthenticatedRequest, res: Response) => {
+export const resolveComment = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
   try {
     const { commentId } = req.params
     const { isResolved } = req.body
@@ -263,7 +259,7 @@ export const resolveComment = async (req: AuthenticatedRequest, res: Response) =
 }
 
 // Get user mentions for a design (for autocomplete)
-export const getDesignUsers = async (req: Request, res: Response) => {
+export const getDesignUsers = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { designId } = req.params
     const { query = '' } = req.query
@@ -299,7 +295,7 @@ export const getDesignUsers = async (req: Request, res: Response) => {
     ])
 
     // Also search all users if query is provided
-    let allUsers = []
+    let allUsers: any[] = []
     if (query) {
       allUsers = await User.find({
         $or: [

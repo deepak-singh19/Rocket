@@ -72,7 +72,7 @@ export class DesignController {
     try {
       const { id } = req.params
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           code: 'INVALID_ID',
           message: 'Invalid design ID format',
@@ -153,7 +153,7 @@ export class DesignController {
       const { id } = req.params
       const updateData = req.body
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           code: 'INVALID_ID',
           message: 'Invalid design ID format',
@@ -204,7 +204,7 @@ export class DesignController {
     try {
       const { id } = req.params
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           code: 'INVALID_ID',
           message: 'Invalid design ID format',
@@ -253,7 +253,7 @@ export class DesignController {
         return
       }
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           code: 'INVALID_ID',
           message: 'Invalid design ID format',
@@ -320,7 +320,7 @@ export class DesignController {
     try {
       const { id } = req.params
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           code: 'INVALID_ID',
           message: 'Invalid design ID format',
@@ -364,7 +364,7 @@ export class DesignController {
       const { id } = req.params
       const { elements, layers, thumbnail } = req.body
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 
         res.status(400).json({
           code: 'INVALID_ID',
@@ -442,7 +442,7 @@ export class DesignController {
       const { id } = req.params
       const { clientVersion, lastSyncAt } = req.query
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           code: 'INVALID_ID',
           message: 'Invalid design ID format',
@@ -510,7 +510,7 @@ export class DesignController {
     try {
       const { id, commentId } = req.params
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           code: 'INVALID_ID',
           message: 'Invalid design ID format',
@@ -519,7 +519,7 @@ export class DesignController {
         return
       }
 
-      if (!mongoose.Types.ObjectId.isValid(commentId)) {
+      if (!commentId || !mongoose.Types.ObjectId.isValid(commentId)) {
         res.status(400).json({
           code: 'INVALID_COMMENT_ID',
           message: 'Invalid comment ID format',
@@ -572,7 +572,7 @@ export class DesignController {
       const { thumbnail } = req.body
 
       // Validate design ID
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           code: 'INVALID_DESIGN_ID',
           message: 'Invalid design ID format',

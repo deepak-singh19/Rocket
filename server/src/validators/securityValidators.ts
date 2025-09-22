@@ -395,13 +395,13 @@ export const secureDesignQuerySchema = z.object({
     .transform(Number)
     .refine(n => n >= 1 && n <= 1000, 'Page must be between 1 and 1000')
     .optional()
-    .default(1),
+    .default('1'),
   limit: z.string()
     .regex(/^\d+$/, 'Limit must be a positive integer')
     .transform(Number)
     .refine(n => n >= 1 && n <= 100, 'Limit must be between 1 and 100')
     .optional()
-    .default(10),
+    .default('10'),
   search: z.string()
     .max(100, 'Search term exceeds maximum length')
     .transform(sanitizeString)
