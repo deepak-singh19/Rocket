@@ -22,6 +22,7 @@ import {
   sendBackward
 } from '../store/canvasSlice'
 import { useCollaboration } from '../hooks/useCollaboration'
+import { selectCurrentUser } from '../store/authSlice'
 import TopBar from '../components/TopBar'
 import LeftLayers from '../components/LeftLayers'
 import RightProperties from '../components/RightProperties'
@@ -39,9 +40,14 @@ const DesignEditor: React.FC = () => {
   const canUndo = useSelector(selectCanUndo)
   const canRedo = useSelector(selectCanRedo)
   const selectedElementId = useSelector(selectSelectedElementId)
+  const user = useSelector(selectCurrentUser)
   
   // Initialize collaboration
-  const collaboration = useCollaboration(selectedDesign?._id || null, 'User')
+  const collaboration = useCollaboration(
+    selectedDesign?._id || null, 
+    user?.name || 'User'
+  )
+
   
   // Clipboard for copy/paste
   const clipboardRef = useRef<any>(null)

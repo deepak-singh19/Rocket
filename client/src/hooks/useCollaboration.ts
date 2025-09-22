@@ -54,45 +54,67 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
 
   // Initialize socket connection
   useEffect(() => {
-    if (!designId) return
+    if (!designId) {
+      // Reset state when no design
+      setState({
+        isConnected: false,
+        socket: null,
+        users: [],
+        currentUser: null
+      })
+      return
+    }
 
-    // Create socket connection
-    const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:4000', {
-      transports: ['websocket', 'polling'],
-      timeout: 10000,
-      forceNew: true
-    })
+    // Initialize socket connection
+    const connectSocket = () => {
+      // Create socket connection
+      const socket = io((import.meta.env as any).VITE_API_URL?.replace('/api', '') || 'http://localhost:4000', {
+        transports: ['websocket', 'polling'],
+        timeout: 20000,
+        forceNew: true,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+      })
 
     socketRef.current = socket
 
     // Connection events
     socket.on('connect', () => {
-
       setState(prev => ({ ...prev, isConnected: true, socket }))
       
       // Join design room
       if (!isJoiningRef.current) {
         isJoiningRef.current = true
-
         socket.emit('join_design', { designId, userName })
       }
     })
 
     socket.on('disconnect', () => {
-
       setState(prev => ({ ...prev, isConnected: false, users: [], currentUser: null }))
       isJoiningRef.current = false
     })
 
     socket.on('connect_error', (error) => {
-      console.error('❌ useCollaboration: Connection error:', error)
+      console.error('useCollaboration: Connection error:', error)
       setState(prev => ({ ...prev, isConnected: false }))
       isJoiningRef.current = false
     })
 
+    socket.on('reconnect', (attemptNumber) => {
+      // Re-join design room after reconnection
+      if (designId && !isJoiningRef.current) {
+        isJoiningRef.current = true
+        socket.emit('join_design', { designId, userName })
+      }
+    })
+
+    socket.on('reconnect_error', (error) => {
+      console.error('useCollaboration: Reconnection error:', error)
+    })
+
     // Room events
     socket.on('joined_design', (data: { designId: string; users: User[] }) => {
-
       const currentUser = data.users.find(u => u.name === userName) || null
       currentUserRef.current = currentUser
       setState(prev => ({
@@ -104,7 +126,6 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
     })
 
     socket.on('user_joined', (data: { userId: string; userName: string }) => {
-
       setState(prev => ({
         ...prev,
         users: [...prev.users, { id: data.userId, name: data.userName }]
@@ -112,7 +133,6 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
     })
 
     socket.on('user_left', (data: { userId: string }) => {
-
       setState(prev => ({
         ...prev,
         users: prev.users.filter(user => user.id !== data.userId)
@@ -151,7 +171,7 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
             break
         }
       } catch (error) {
-        console.error('❌ useCollaboration: Error processing element operation:', error)
+        console.error('useCollaboration: Error processing element operation:', error)
       }
     })
 
@@ -179,12 +199,33 @@ export const useCollaboration = (designId: string | null, userName: string = 'Us
 
     // Error handling
     socket.on('error', (error: { code: string; message: string }) => {
-      console.error('❌ useCollaboration: Socket error:', error)
+      console.error('useCollaboration: Socket error:', error)
     })
 
-    // Cleanup on unmount or design change
-    return () => {
+      // Cleanup on unmount or design change
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.emit('leave_design', { designId })
+          socketRef.current.disconnect()
+          socketRef.current = null
+        }
+        currentUserRef.current = null
+        setState({
+          isConnected: false,
+          socket: null,
+          users: [],
+          currentUser: null
+        })
+        isJoiningRef.current = false
+      }
+    }
 
+    // Connect immediately if design is loaded, otherwise with small delay
+    const initTimer = setTimeout(connectSocket, designId ? 50 : 100)
+
+    // Cleanup function
+    return () => {
+      clearTimeout(initTimer)
       if (socketRef.current) {
         socketRef.current.emit('leave_design', { designId })
         socketRef.current.disconnect()

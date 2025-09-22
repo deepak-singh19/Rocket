@@ -38,11 +38,9 @@ const LeftLayers: React.FC<LeftLayersProps> = ({ collaboration }) => {
     dispatch(removeElement(elementId))
     
     // Broadcast deletion to other users
-    if (selectedDesign && collaboration) {
-
+    if (selectedDesign && collaboration && collaboration.isConnected && collaboration.currentUser) {
       collaboration.broadcastElementOperation({
         type: 'element_deleted',
-        designId: selectedDesign._id,
         elementId: elementId
       })
     } else {

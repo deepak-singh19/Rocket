@@ -218,10 +218,9 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ collaboration }) => {
     }))
     
     // Broadcast to other users
-    if (collaboration && collaboration.isConnected) {
+    if (collaboration && collaboration.isConnected && collaboration.currentUser) {
       collaboration.broadcastElementOperation({
         type: 'element_updated',
-        designId: selectedDesign?._id || '',
         elementId,
         updates
       })
@@ -282,10 +281,9 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ collaboration }) => {
         dispatch(finishDrawing({ elementId }))
         
         // Broadcast drawing to other users
-        if (selectedDesign && collaboration && collaboration.isConnected) {
+        if (selectedDesign && collaboration && collaboration.isConnected && collaboration.currentUser) {
           collaboration.broadcastElementOperation({
             type: 'element_added',
-            designId: selectedDesign._id,
             elementId: elementId,
             element: {
               id: elementId,
@@ -353,12 +351,13 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ collaboration }) => {
     }))
     
     // Broadcast to other users
-    broadcastElementOperation({
-      type: 'element_transformed',
-      designId: selectedDesign?._id || '',
-      elementId,
-      updates
-    })
+    if (collaboration && collaboration.isConnected && collaboration.currentUser) {
+      collaboration.broadcastElementOperation({
+        type: 'element_transformed',
+        elementId,
+        updates
+      })
+    }
   }
 
   const renderElement = (element: CanvasElement) => {

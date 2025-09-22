@@ -1,8 +1,80 @@
 # Canvas Studio 🎨
 
-A powerful, collaborative design editor built with React, TypeScript, and Node.js. Create, edit, and share beautiful designs with real-time collaboration, advanced canvas tools, and comprehensive commenting system.
+A collaborative real-time design editor built with React, Node.js, and Socket.IO. Create, edit, and collaborate on designs with multiple users in real-time.
 
 ![Canvas Studio](https://img.shields.io/badge/version-1.0.0-blue.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![React](https://img.shields.io/badge/React-18.2.0-blue.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue.svg) ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
+
+## 🏗️ Architecture Overview
+
+### System Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Backend       │    │   Database      │
+│   (React)       │◄──►│   (Node.js)     │◄──►│   (MongoDB)     │
+│                 │    │                 │    │                 │
+│ • Canvas Editor │    │ • REST API      │    │ • Users         │
+│ • Real-time UI  │    │ • Socket.IO     │    │ • Designs       │
+│ • State Mgmt    │    │ • Auth System   │    │ • Comments      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### Technology Stack & Library Choices
+
+#### Frontend Technologies
+- **React 18** - Modern UI library with concurrent features
+- **TypeScript** - Type safety and developer experience
+- **Redux Toolkit** - Predictable state management
+- **Konva.js** - High-performance 2D canvas rendering
+- **Socket.IO Client** - Real-time communication
+- **Tailwind CSS** - Utility-first CSS framework
+- **Vite** - Fast build tool and dev server
+
+#### Backend Technologies
+- **Node.js + Express** - JavaScript runtime and web framework
+- **Socket.IO** - Real-time bidirectional communication
+- **MongoDB + Mongoose** - NoSQL database and ODM
+- **JWT** - Stateless authentication
+- **Helmet** - Security middleware
+
+### Key Library Decisions
+
+#### Canvas Rendering: Konva.js ✅
+**Why Konva.js:**
+- Hardware-accelerated Canvas API performance
+- Excellent React integration (`react-konva`)
+- Built-in transformations, events, and animations
+- Easy export capabilities
+
+**Rejected Alternatives:**
+- **Fabric.js**: Heavier, less React-friendly
+- **Paper.js**: Vector-focused, overkill for use case
+- **Native Canvas**: Too low-level for rapid development
+
+#### State Management: Redux Toolkit ✅
+**Why Redux Toolkit:**
+- Time-travel debugging for complex canvas operations
+- RTK Query for efficient data fetching
+- Excellent TypeScript support
+- Easy state synchronization across collaboration
+
+**Rejected Alternatives:**
+- **Zustand**: Too simple for complex canvas state
+- **Context API**: Performance issues with frequent updates
+
+#### Real-time: Socket.IO ✅
+**Why Socket.IO:**
+- Automatic WebSocket/polling fallback for reliability
+- Built-in room system for design collaboration
+- Event-based architecture fits our use case
+- Production-ready scaling with Redis adapter
+
+#### Database: MongoDB ✅
+**Why MongoDB:**
+- Flexible schema for varying element structures
+- Natural JSON storage for complex nested objects
+- Powerful aggregation for analytics
+- Horizontal scaling capabilities
 
 ## ✨ Features
 
@@ -101,6 +173,215 @@ canvas-studio/
 - **Vitest** - Unit and integration testing
 - **ESLint** - Code linting
 - **GitHub Actions** - CI/CD (configurable)
+
+## 📡 API Documentation
+
+### Authentication Endpoints
+
+#### POST `/api/auth/register`
+Register a new user account.
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "_id": "user_id",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "createdAt": "2023-12-01T00:00:00.000Z"
+    },
+    "tokens": {
+      "accessToken": "jwt_token",
+      "refreshToken": "refresh_token",
+      "expiresIn": "24h"
+    }
+  }
+}
+```
+
+#### POST `/api/auth/login`
+Authenticate user and receive tokens.
+
+#### GET `/api/auth/verify`
+Verify JWT token and get current user information.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+### Design Endpoints
+
+#### GET `/api/designs`
+Get paginated list of designs.
+
+**Query Parameters:**
+- `page` (number): Page number (default: 1)
+- `limit` (number): Items per page (default: 10)
+- `search` (string): Search by title
+- `createdBy` (string): Filter by user ID
+
+#### POST `/api/designs`
+Create a new design.
+
+**Request Body:**
+```json
+{
+  "title": "My New Design",
+  "description": "Optional description",
+  "canvasSize": { "width": 1200, "height": 800 },
+  "elements": []
+}
+```
+
+#### GET `/api/designs/:id`
+Get a specific design by ID.
+
+#### PUT `/api/designs/:id`
+Update a design with new elements and properties.
+
+#### DELETE `/api/designs/:id`
+Delete a design (only by owner).
+
+### Comments Endpoints
+
+#### GET `/api/comments?designId=:designId`
+Get all comments for a design.
+
+#### POST `/api/comments`
+Add a comment to a design.
+
+**Request Body:**
+```json
+{
+  "designId": "design_id",
+  "text": "This looks great!",
+  "position": { "x": 100, "y": 100 }
+}
+```
+
+## 🗄️ Database Schema Design
+
+### Users Collection
+```javascript
+{
+  _id: ObjectId,
+  name: String,           // Display name
+  email: String,          // Unique email (indexed)
+  password: String,       // Hashed with bcrypt
+  avatar: String,         // Avatar URL (optional)
+  createdAt: Date,
+  lastLogin: Date
+}
+```
+
+### Designs Collection
+```javascript
+{
+  _id: ObjectId,
+  title: String,          // Design title
+  description: String,    // Optional description
+  userId: ObjectId,       // Creator reference (indexed)
+  
+  canvasSize: {
+    width: Number,
+    height: Number
+  },
+  
+  elements: [{
+    id: String,           // Unique element ID
+    type: String,         // 'rect', 'circle', 'text', 'image', 'drawing'
+    x: Number, y: Number, // Position
+    width: Number, height: Number, // Dimensions
+    
+    // Styling
+    fill: String,         // Color or gradient
+    stroke: String,       // Border color
+    strokeWidth: Number,
+    opacity: Number,      // 0-1
+    
+    // Type-specific properties
+    text: String,         // For text elements
+    fontSize: Number,
+    src: String,          // For images
+    pathData: String,     // For drawings
+    
+    // Transform
+    rotation: Number,
+    scaleX: Number, scaleY: Number,
+    
+    // State
+    visible: Boolean,
+    locked: Boolean
+  }],
+  
+  isPublic: Boolean,      // Public visibility
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### Comments Collection
+```javascript
+{
+  _id: ObjectId,
+  designId: ObjectId,     // Design reference (indexed)
+  userId: ObjectId,       // Author reference
+  text: String,           // Comment text
+  position: { x: Number, y: Number }, // Canvas position
+  resolved: Boolean,      // Resolution status
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+## 🔌 Real-time Collaboration
+
+### Socket.IO Events
+
+#### Connection Management
+```javascript
+// Client joins design room
+socket.emit('join_design', { designId, userName })
+
+// Server confirms join
+socket.emit('joined_design', { designId, users: [] })
+
+// User presence
+socket.emit('user_joined', { userId, userName })
+socket.emit('user_left', { userId })
+```
+
+#### Element Operations
+```javascript
+socket.emit('element_operation', {
+  type: 'element_added' | 'element_updated' | 'element_deleted',
+  designId: string,
+  elementId: string,
+  element?: object,    // For add operations
+  updates?: object,    // For update operations
+  userId: string,
+  timestamp: number
+})
+```
+
+#### Cursor Tracking
+```javascript
+socket.emit('cursor_move', { designId, x, y })
+socket.emit('user_cursor', { userId, userName, cursor: { x, y } })
+```
 
 ## 🚀 Quick Start
 
@@ -340,40 +621,146 @@ comment_resolved     # Comment resolution status
 
 ## 🚀 Deployment
 
-### Production Build
+### Railway Deployment (Recommended)
+
+Railway provides the easiest way to deploy your Canvas Studio backend with zero configuration.
+
+#### 1. Prepare for Railway Deployment
+
 ```bash
-# Build both client and server
+# Build the project to check for errors
 npm run build
 
-# Or build separately
-npm run build:client
-npm run build:server
+# Commit all changes
+git add .
+git commit -m "Prepare for Railway deployment"
+git push
 ```
 
-### Environment Variables
+#### 2. Deploy to Railway
+
+**Option A: Using Railway CLI**
 ```bash
-# Production environment (server/.env)
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Deploy from your repository
+railway link
+railway up
+```
+
+**Option B: Using Railway Dashboard**
+1. Go to [Railway.app](https://railway.app)
+2. Sign in with GitHub
+3. Click "Deploy from GitHub repo"
+4. Select your Canvas Studio repository
+5. Railway will automatically detect and deploy your Node.js app
+
+#### 3. Configure Environment Variables
+
+In your Railway dashboard, add these environment variables:
+
+```bash
 NODE_ENV=production
 PORT=4000
-MONGODB_URI=mongodb://your-mongo-server/canvas-studio
-JWT_SECRET=your-super-secret-jwt-key
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/canvas-studio
+JWT_SECRET=your-super-secret-jwt-key-change-this
 CLIENT_URL=https://your-frontend-domain.com
 CORS_ORIGIN=https://your-frontend-domain.com
 ```
 
-### Docker Production Deployment
+#### 4. Database Setup
+
+**MongoDB Atlas (Recommended)**
+1. Create a free MongoDB Atlas account
+2. Create a new cluster
+3. Get the connection string
+4. Add it as `MONGODB_URI` in Railway
+
+**Railway MongoDB Plugin**
 ```bash
-# Build production images
-npm run docker:build
-
-# Start production containers
-npm run docker:up
-
-# Monitor logs
-npm run docker:logs
+# Add MongoDB service to your Railway project
+railway add mongodb
+# Railway will automatically provide MONGODB_URI
 ```
 
-### Manual Deployment
+#### 5. Frontend Deployment
+
+Deploy your frontend to Vercel, Netlify, or similar:
+
+**Vercel:**
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy frontend
+cd client
+vercel --prod
+```
+
+**Netlify:**
+```bash
+# Build frontend
+cd client
+npm run build
+
+# Deploy dist/ folder to Netlify
+```
+
+### Docker Production Deployment
+
+Canvas Studio includes a robust multi-stage Dockerfile optimized for Railway and other container platforms.
+
+#### Quick Docker Build
+```bash
+# Test the Docker build locally
+./build-docker.sh
+
+# Or build manually
+docker build --platform linux/amd64 --no-cache -t canvas-studio .
+```
+
+#### Docker Features
+- **Multi-stage build** for optimized image size
+- **Security hardened** with non-root user
+- **Nginx reverse proxy** for serving static files
+- **Health checks** and graceful shutdowns
+- **CI cache avoidance** for reliable builds
+
+#### Railway Docker Deployment
+```bash
+# Deploy to Railway using Docker
+railway up
+
+# Monitor deployment
+railway logs
+```
+
+#### Local Docker Testing
+```bash
+# Run the container locally
+docker run -p 8080:8080 \
+  -e MONGODB_URI="your-mongodb-uri" \
+  -e JWT_SECRET="your-jwt-secret" \
+  -e CLIENT_URL="http://localhost:8080" \
+  canvas-studio
+
+# Access the application
+open http://localhost:8080
+```
+
+#### Docker Configuration
+The Dockerfile includes:
+- **Nginx** serving the React frontend on port 8080
+- **Node.js API** running on internal port 4000  
+- **WebSocket support** for real-time collaboration
+- **Health monitoring** at `/health`
+- **Production optimizations** (gzip, caching, security headers)
+
+### Manual Server Deployment
 ```bash
 # Server deployment
 cd server
@@ -385,6 +772,26 @@ cd client
 npm run build
 # Deploy dist/ to your web server (Nginx, Apache, etc.)
 ```
+
+### Railway Environment Variables Reference
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `NODE_ENV` | Application environment | `production` |
+| `PORT` | Server port (Railway auto-assigns) | `4000` |
+| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/canvas-studio` |
+| `JWT_SECRET` | Secret key for JWT tokens | `your-super-secret-jwt-key` |
+| `CLIENT_URL` | Frontend application URL | `https://your-app.vercel.app` |
+| `CORS_ORIGIN` | Allowed CORS origins | `https://your-app.vercel.app` |
+
+### Deployment Checklist
+
+- [ ] **Code Ready**: All TypeScript errors fixed and project builds successfully
+- [ ] **Database**: MongoDB Atlas cluster created or Railway MongoDB added
+- [ ] **Environment Variables**: All required variables set in Railway dashboard
+- [ ] **Frontend**: Client deployed to Vercel/Netlify with correct API URL
+- [ ] **Testing**: API endpoints accessible and functioning
+- [ ] **Domain**: Custom domain configured (optional)
 
 ## 🔧 Configuration
 
@@ -493,6 +900,193 @@ npx tsc --noEmit
 - Implement caching for frequently accessed data
 - Use compression middleware for API responses
 
+
+## ✂️ What Was Cut and Why
+
+### Features Removed for MVP
+
+#### 1. Advanced Drawing Tools
+**What was cut:**
+- Brush textures and patterns
+- Vector path editing with bezier curves
+- Advanced shape tools (polygons, stars)
+- Layer effects (shadows, glows, filters)
+- Pressure-sensitive drawing
+
+**Why removed:**
+- **Time constraints**: Complex to implement properly within timeline
+- **Library limitations**: Konva.js has some advanced drawing limitations
+- **User research**: Basic drawing tools cover 80% of use cases
+- **Technical debt**: Would require significant architecture changes
+
+#### 2. File Import/Export
+**What was cut:**
+- Import PSD, AI, Sketch files
+- Export to PDF, SVG with full fidelity
+- Bulk export operations
+- File version management
+- Advanced export options (quality, compression)
+
+**Why removed:**
+- **Complex parsing**: PSD parsing requires expensive libraries
+- **Server resources**: File processing is resource-intensive
+- **Bundle size**: Would significantly increase client bundle
+- **Focus**: Prioritized core collaboration over file formats
+
+#### 3. Advanced Collaboration Features
+**What was cut:**
+- Voice/video chat integration
+- Screen sharing capabilities
+- Advanced permissions (edit/view/comment roles)
+- Collaborative cursor following
+- Real-time voice comments
+- Team workspaces
+
+**Why removed:**
+- **Scope creep**: Would turn project into communication platform
+- **Technical complexity**: WebRTC integration is complex
+- **Third-party dependencies**: Would rely heavily on external services
+- **MVP focus**: Basic real-time collaboration covers core needs
+
+#### 4. Asset Management System
+**What was cut:**
+- Built-in stock photo library
+- Custom font uploads
+- Asset organization and tagging
+- Team asset libraries
+- CDN asset delivery optimization
+
+**Why removed:**
+- **Storage costs**: Asset storage would be expensive at scale
+- **Licensing complexity**: Stock photo licensing is complex
+- **Performance impact**: Asset management adds significant complexity
+- **Integration option**: Can integrate external services (Unsplash API)
+
+#### 5. Mobile Native Apps
+**What was cut:**
+- iOS native application
+- Android native application
+- Mobile-optimized canvas editor
+- Touch gesture support
+- Mobile-specific UI patterns
+
+**Why removed:**
+- **Platform complexity**: Three platforms to maintain simultaneously
+- **Touch interactions**: Canvas editing on mobile is challenging UX
+- **Performance optimization**: Mobile performance is complex
+- **Development time**: Would triple development effort
+
+#### 6. Advanced User Management
+**What was cut:**
+- Organization/team management
+- Role-based access control (RBAC)
+- Single sign-on (SSO) integration
+- User analytics and activity tracking
+- Advanced admin dashboard
+
+**Why removed:**
+- **Enterprise complexity**: Would require complete architecture rewrite
+- **B2B features**: MVP targets individual users first
+- **Database complexity**: Multi-tenancy is architecturally complex
+- **Compliance overhead**: GDPR, SOC2 compliance requirements
+
+### Architectural Decisions
+
+#### Database Choice: MongoDB vs PostgreSQL
+**Rejected: PostgreSQL with JSONB**
+- More rigid schema management
+- Complex migrations for dynamic element structures
+- Better for analytics but overkill for MVP
+- Requires more SQL expertise
+
+**Chosen: MongoDB**
+- Faster development iteration
+- Natural JSON structure matches frontend
+- Easier schema evolution
+- Simpler for canvas element storage
+
+#### Frontend Framework: React vs Alternatives
+**Rejected: Vue.js or Svelte**
+- Smaller ecosystems for canvas libraries
+- Less talent pool for hiring
+- Fewer community resources
+
+**Chosen: React**
+- Mature ecosystem with extensive libraries
+- Better Konva.js integration
+- Larger talent pool
+- Excellent TypeScript support
+
+#### Real-time Architecture: WebRTC vs WebSocket
+**Rejected: WebRTC peer-to-peer**
+- Complex signaling server requirements
+- NAT traversal and firewall issues
+- Harder to implement features like persistence
+- Browser compatibility challenges
+
+**Chosen: WebSocket with Socket.IO**
+- Simpler server architecture
+- Better for persistent state management
+- Easier feature implementation
+- Production-ready scaling options
+
+### Performance Trade-offs
+
+#### Server-Side Rendering (SSR)
+**Rejected: Next.js with SSR**
+- Canvas applications don't benefit from SSR
+- Complex hydration with dynamic canvas content
+- Better to focus on client-side performance
+- Adds unnecessary complexity
+
+#### Bundle Optimization
+**Deferred: Advanced code splitting**
+- Most users will use the main editor bundle
+- Premature optimization for current user base
+- Can be added later without architecture changes
+- Focus on feature completion first
+
+### Security Simplifications
+
+#### Advanced Authentication
+**Deferred: OAuth providers (Google, GitHub)**
+- Email/password sufficient for MVP
+- OAuth adds dependency complexity
+- Can be added incrementally
+- Focus on core security features
+
+#### Advanced Rate Limiting
+**Simplified: Basic rate limiting**
+- Advanced per-user limits deferred
+- Complex abuse detection deferred
+- Basic protection sufficient for launch
+- Can enhance based on usage patterns
+
+## 🚀 Future Roadmap
+
+### Phase 1: Core Improvements (Next 2-3 months)
+- Mobile responsiveness improvements
+- Performance optimization and bundle splitting
+- Basic file export (PNG, JPEG) improvements
+- Accessibility features (keyboard navigation)
+
+### Phase 2: Enhanced Features (3-6 months)
+- Template system with pre-built designs
+- Basic asset library integration (Unsplash)
+- Advanced text editing capabilities
+- Import/export for common formats
+
+### Phase 3: Collaboration Plus (6-12 months)
+- Team workspaces and organizations
+- Advanced permissions and roles
+- Design version history
+- Enhanced commenting system
+
+### Phase 4: Platform Evolution (12+ months)
+- Mobile native applications
+- Plugin system for third-party integrations
+- Enterprise features (SSO, compliance)
+- AI-powered design suggestions
 
 ## 🙏 Acknowledgments
 

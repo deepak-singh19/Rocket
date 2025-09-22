@@ -181,10 +181,9 @@ const TopBar: React.FC<TopBarProps> = ({ collaboration }) => {
     dispatch(addTextElement({ ...elementData, id: elementId }))
     
    
-    if (selectedDesign && isConnected) {
-      broadcastElementOperation({
+    if (selectedDesign && collaboration && collaboration.isConnected && collaboration.currentUser) {
+      collaboration.broadcastElementOperation({
         type: 'element_added',
-        designId: selectedDesign._id,
         elementId: elementId,
         element: {
           id: elementId,
@@ -221,10 +220,9 @@ const TopBar: React.FC<TopBarProps> = ({ collaboration }) => {
     dispatch(addRectElement({ ...elementData, id: elementId }))
     
     
-    if (selectedDesign && isConnected) {
-      broadcastElementOperation({
+    if (selectedDesign && collaboration && collaboration.isConnected && collaboration.currentUser) {
+      collaboration.broadcastElementOperation({
         type: 'element_added',
-        designId: selectedDesign._id,
         elementId: elementId,
         element: {
           id: elementId,
@@ -255,10 +253,9 @@ const TopBar: React.FC<TopBarProps> = ({ collaboration }) => {
     dispatch(addCircleElement({ ...elementData, id: elementId }))
     
    
-    if (selectedDesign && isConnected) {
-      broadcastElementOperation({
+    if (selectedDesign && collaboration && collaboration.isConnected && collaboration.currentUser) {
+      collaboration.broadcastElementOperation({
         type: 'element_added',
-        designId: selectedDesign._id,
         elementId: elementId,
         element: {
           id: elementId,
@@ -293,7 +290,6 @@ const TopBar: React.FC<TopBarProps> = ({ collaboration }) => {
       if (selectedDesign && isConnected) {
         broadcastElementOperation({
           type: 'element_added',
-          designId: selectedDesign._id,
           elementId: elementId,
           element: {
             id: elementId,
