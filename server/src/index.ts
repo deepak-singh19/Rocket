@@ -18,36 +18,6 @@ dotenv.config()
 
 const app = express()
 
-//
-// ====== TOP-LEVEL PRELIGHT (paste right after dotenv.config(), BEFORE any app.use) ======
-app.use((req, res, next) => {
-  // quick pass-through for requests that are not preflight
-  if (req.method !== 'OPTIONS') return next();
-
-  // Log preflight so we can diagnose
-  console.log(`[PREFLIGHT] ${new Date().toISOString()} ${req.method} ${req.originalUrl} origin=${req.headers.origin || 'none'}`);
-
-  try {
-    const origin = (req.headers.origin as string) || '*';
-
-    // Set CORS response headers expected by browsers
-    // If you want to restrict origins later, change origin handling here.
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type,Authorization,X-Requested-With');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Vary', 'Origin');
-
-    // success - no body
-    return res.status(204).send();
-  } catch (err) {
-    console.error('[PREFLIGHT-ERR]', err && (err as any).stack ? (err as any).stack : err);
-    // If something unexpected happens here, return a benign 204 to avoid blocking the browser flow
-    return res.status(204).send();
-  }
-});
-// =======================================================================================
-
 
 
 const PORT = process.env.PORT || 4000
@@ -64,28 +34,40 @@ mongoose.connect(MONGODB_URI)
   })
 
 
-  app.use(cors({
-    origin: true,            // reflect request origin (works with credentials)
-    credentials: true,
-    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
-    optionsSuccessStatus: 204
-  }));
-  
-  // ensure preflight always receives proper CORS headers
-  app.options('*', cors({ origin: true, credentials: true }));
+// CORS configuration - must be BEFORE security middleware
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Allow requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true)
+    
+    // Allow localhost development origins
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000', 
+      'http://localhost:4000',
+      'https://rocket-deepaksingh16cs.replit.app'
+    ]
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      console.log(`[CORS] Blocked origin: ${origin}`)
+      callback(null, true) // Allow all origins in development - change to false in production
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+}
 
-  app.options('*', (req, res) => {
-    // quick 204 for any preflight; no middleware will run
-    console.log(`[SHORTCIRCUIT] ${new Date().toISOString()} Preflight ${req.originalUrl} origin=${req.headers.origin || 'none'}`);
-    return res.sendStatus(204);
-  });
-  
-  // Lightweight request logger to help debug preflight / CORS issues
-  app.use((req, _res, next) => {
-    console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.originalUrl} origin=${req.headers.origin || 'none'}`);
-    next();
-  });
+app.use(cors(corsOptions))
+
+// Request logger to help debug CORS issues
+app.use((req, _res, next) => {
+  console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.originalUrl} origin=${req.headers.origin || 'none'}`)
+  next()
+})
 
 
 

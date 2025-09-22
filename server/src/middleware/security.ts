@@ -37,7 +37,13 @@ export const securityHeaders = helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://picsum.photos"],
-      connectSrc: ["'self'", "http://localhost:4000", "ws://localhost:4000"],
+      connectSrc: [
+        "'self'", 
+        "http://localhost:4000", 
+        "http://localhost:5173",
+        "ws://localhost:4000",
+        "https://rocket-deepaksingh16cs.replit.app"
+      ],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -45,6 +51,7 @@ export const securityHeaders = helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
