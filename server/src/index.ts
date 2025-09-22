@@ -16,11 +16,20 @@ import { securityMiddleware } from './middleware/security.js'
 dotenv.config()
 
 
+// Global error logging (capture crashes)
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err && (err as any).stack ? (err as any).stack : err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason && (reason as any).stack ? (reason as any).stack : reason)
+})
+
+
 const app = express()
 
 
 
-const PORT = process.env.PORT || 4000
+const PORT = parseInt(process.env.PORT || '4000', 10)
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/canvas-studio'
 
 // Connect to MongoDB
@@ -133,8 +142,14 @@ const httpServer = createServer(app)
 const collaborationHandler = new CollaborationHandler(httpServer)
 
 // Start server
-httpServer.listen(PORT, () => {
+// httpServer.listen(PORT, () => {
 
+// })
+
+const HOST = process.env.HOST || '0.0.0.0'
+
+httpServer.listen(PORT, HOST, () => {
+  console.log(`Server listening on ${HOST}:${PORT} (NODE_ENV=${process.env.NODE_ENV || 'dev'})`)
 })
 
 export default app
