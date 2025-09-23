@@ -28,6 +28,8 @@ process.on('unhandledRejection', (reason) => {
 const app = express()
 
 
+app.set("trust proxy", 1);
+
 
 const PORT = parseInt(process.env.PORT || '4000', 10)
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/canvas-studio'
@@ -46,22 +48,25 @@ mongoose.connect(MONGODB_URI)
 // CORS configuration - must be BEFORE security middleware
 const corsOptions = {
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // Allow requests with no origin (like mobile apps, Postman, etc.)
+   
     if (!origin) return callback(null, true)
     
-    // Allow localhost development origins
+    
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:3000', 
       'http://localhost:4000',
-      'https://rocket-deepaksingh16cs.replit.app'
+      'https://rocket-deepaksingh16cs.replit.app',
+      'https://dainty-queijadas-8ea480.netlify.app/',
+      'https://canvas-studio-server-production.up.railway.app/'
+
     ]
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true)
     } else {
       console.log(`[CORS] Blocked origin: ${origin}`)
-      callback(null, true) // Allow all origins in development - change to false in production
+      callback(null, true) 
     }
   },
   credentials: true,
@@ -135,10 +140,10 @@ app.get('/', (req, res) => {
 app.use(notFoundHandler)
 app.use(errorHandler)
 
-// Create HTTP server
+
 const httpServer = createServer(app)
 
-// Setup Collaboration Socket.IO
+
 const collaborationHandler = new CollaborationHandler(httpServer)
 
 // Start server
