@@ -57,8 +57,8 @@ const corsOptions = {
       'http://localhost:3000', 
       'http://localhost:4000',
       'https://rocket-deepaksingh16cs.replit.app',
-      'https://dainty-queijadas-8ea480.netlify.app/',
-      'https://canvas-studio-server-production.up.railway.app/'
+      'https://dainty-queijadas-8ea480.netlify.app',
+      'https://canvas-studio-server-production.up.railway.app'
 
     ]
     
